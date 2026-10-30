@@ -19,7 +19,11 @@ guards against repeated questions, enforces one-terminal-line
 discipline, and writes each call's facts and commitments back to
 memory, plus data-file playbooks (appointment scheduling,
 information gathering, follow-up) selectable via
-`place_call.py --playbook/--counterparty`. Suite: 243/243 offline.
+`place_call.py --playbook/--counterparty`. The brain fails over
+across the model pool (fast pool, then frontier) when a provider
+model errors — one model's 503 no longer silences a call
+(`server/llm_failover.py`; call records carry an `llm_failover`
+block). Suite: 250/250 offline.
 
 ## Architecture
 

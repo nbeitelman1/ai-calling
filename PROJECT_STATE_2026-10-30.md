@@ -188,3 +188,45 @@ brief: `docs/PERSONA_MEMORY_SPEC.md`. Shipped on
 - Push/merge state: see the git log — `review/ai-calling-candidate`
   carries the working system; `main` carries the Oct 30 morning
   bench fixes (5df6523) and, if the merge landed, this build-out.
+
+## Addendum — LLM failover fix (Oct 30, 2026, late evening)
+
+The intelligence-pass retest call (attempt 743d1d80, ~5:04pm EDT)
+failed live: Nathan heard nothing, 5 user turns transcribed, ZERO
+assistant replies. Diagnosis from the journal, not conjecture:
+GoogleLLMService raised the provider's real 503 ("This model is
+currently experiencing high demand") on every inference attempt —
+gemini-3.1-flash-lite was down, and the pipeline held exactly ONE
+LLM service built from pool[0] (resolve_model), so the healthy
+second pool model (gemini-3.5-flash-lite) was never instantiated.
+Pipecat's error path (ErrorFrame, fatal=False) ends the turn; with
+no fallback, every turn ended in silence. NOT an intelligence-layer
+defect: persona/brief/tracker never got a reply to mishandle, and
+the service environment (NO_PROXY/SSL fix, keys) verified intact.
+A same-evening probe: 3.1-flash-lite 503, 3.5-flash-lite OK in
+0.89s, frontier 3.8-flash also 503. Reproduced offline with REAL
+providers through the production media handler: 3 turns, 3 real
+503s, 0 replies (each doomed turn also burned ~45s in the SDK's
+same-model retry backoff).
+
+Fix (server/llm_failover.py): an LLMFailoverMixin composed over
+GoogleLLMService in build_live_pipeline. _stream_response walks a
+chain (fast pool in order, then frontier pool; env-driven, "dynamic
+always" preserved), abandoning a model only before its first
+streamed chunk and only on failover-worthy errors (5xx, 429/408/
+409, 404 pool hygiene, transport errors, timeouts — never 400/403,
+never after text has streamed). Switching is sticky across turns.
+The SDK gets one attempt per model (HttpRetryOptions attempts=1)
+so a dead model surfaces in seconds. Call records now carry
+`llm_failover` {events, model_used, chain, switches}. Proof on the
+fixed code, real providers, same harness: turn 1 failed over
+3.1 -> 3.5 and was answered; turns 2-3 answered directly by 3.5.
+
+Regression coverage (tests/test_llm_failover.py): the fake sits at
+the google.genai.Client seam — the layer that actually failed —
+so the real GoogleLLMService, error path, aggregators and gate all
+execute. (The intelligence evals faked the whole LLM service; that
+blind spot is what let this ship.) Suite: **250/250** candidate,
+reference **57/57**, mutations **3/3 caught**, manifest verified.
+No live call was placed for this fix; a retest needs Nathan's
+fresh per-call approval.
