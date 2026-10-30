@@ -213,7 +213,8 @@ async def readyz():
 
 
 _JOB_FIELDS = {"to", "business", "objective", "allowed_decisions",
-               "max_minutes", "test_call", "opening", "pronunciation_hints"}
+               "max_minutes", "test_call", "opening", "pronunciation_hints",
+               "playbook", "counterparty"}
 _REF_FIELDS = {"groq_api_key_ref", "gemini_api_key_ref", "elevenlabs_api_key_ref",
                "telnyx_api_key_ref", "elevenlabs_voice_id"}
 

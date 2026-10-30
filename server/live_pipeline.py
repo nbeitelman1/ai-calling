@@ -62,6 +62,9 @@ from model_select import (
     sanitize_outgoing,
 )
 from telnyx_media import MediaAttachGate
+import call_controller
+import conversation_state
+from conversation_state import ConversationTracker
 from voice_pipeline import (
     AI_IDENTITY_ANSWER,
     DISCLOSURE_PREFIX,
@@ -71,6 +74,18 @@ from voice_pipeline import (
 )
 
 DISCLOSURE_OPENING = "Hi, this is Nathan's assistant calling on his behalf."
+
+# The hand-back line: Nathan's approved verbatim wording. Once it is
+# spoken the call is over — terminal discipline in ResponseGate /
+# TranscriptTap / the media handler guarantees it is spoken once
+# and the pipeline moves to hangup without new inference.
+HAND_BACK_LINE = "Nathan will need to take this over. I'll end the call now."
+
+# The repetition guard's closing line when the model exhausts the
+# playbook by re-asking: our own text, spoken through normal TTS
+# (not a cached fixed phrase).
+WRAP_UP_LINE = ("I think we've covered what I needed. "
+                "Thank you for your time — goodbye.")
 
 FORBIDDEN_TOPICS = (
     "Social Security numbers",
@@ -115,6 +130,14 @@ class LiveCallJob:
     test_call: bool = True
     opening: str = DISCLOSURE_OPENING
     pronunciation_hints: dict[str, str] = field(default_factory=dict)
+    # Intelligence pass (docs/PERSONA_MEMORY_SPEC.md): the playbook
+    # name and counterparty identity flow in from place_call.py; the
+    # frozen CallBrief is attached by the media handler (or built
+    # store-less by build_live_pipeline) and never serialized into
+    # the registration payload.
+    playbook: str = ""
+    counterparty: str = ""
+    brief: object = field(default=None, repr=False)
 
     def __post_init__(self):
         from telnyx_adapter.wire import check_e164
@@ -132,38 +155,65 @@ class LiveCallJob:
                 or not all(isinstance(k, str) and isinstance(v, str) and len(k) <= 128 and len(v) <= 128
                            for k, v in self.pronunciation_hints.items())):
             raise ValueError('invalid pronunciation_hints')
+        if not isinstance(self.playbook, str) or len(self.playbook) > 128:
+            raise ValueError('invalid playbook')
+        if not isinstance(self.counterparty, str) or len(self.counterparty) > 512:
+            raise ValueError('invalid counterparty')
         validate_job_script(self.opening)
         if not self.allowed_decisions:
             self.allowed_decisions = ["ending the call"]
 
 
 def build_system_prompt(job: LiveCallJob) -> str:
+    """Persona core + the frozen call brief + the hard rules.
+
+    The brief (persona, playbook, profile background, end
+    conditions) is assembled once by the control plane before the
+    call; this function only renders it. The honesty lines stay
+    verbatim. Note the deliberate fix versus the pre-intelligence
+    prompt: being asked whether you are an AI is an identity
+    question answered honestly while the call CONTINUES — it was
+    previously lumped into the hand-back triggers, which ended the
+    Oct 30 qualification call's best moment.
+    """
+    brief = job.brief or call_controller.build_brief(job)
+    allowed = list(job.allowed_decisions)
+    if brief.playbook:
+        for decision in brief.playbook.get("allowed_decisions", []):
+            if decision not in allowed:
+                allowed.append(decision)
     pronunciations = ""
     if job.pronunciation_hints:
         pronunciations = "\nPronunciations: " + "; ".join(
             f"{word}: {spoken}" for word, spoken in job.pronunciation_hints.items())
-    return (
-        "You are Nathan's assistant, making a phone call on his behalf.\n"
-        f"Business: {job.business}\n"
-        f"Objective: {job.objective}\n"
+    parts = [
+        brief.persona_core,
+        f"Business: {job.business}",
+        f"Objective: {job.objective}",
         "Allowed decisions (nothing else is binding): "
-        + ", ".join(job.allowed_decisions)
-        + "\n"
-        "NEVER ask for, repeat, or act on: " + ", ".join(FORBIDDEN_TOPICS) + ".\n"
-        "If any of those is requested, or if the caller asks for a human, "
-        "asks if you are AI, or refuses to talk to an assistant, say "
-        "\"Nathan will need to take this over. I'll end the call now.\" and end your turn. "
-        "No live transfer is implemented; never promise to connect Nathan.\n"
-        f"If asked directly whether you are a person or AI, answer exactly: {AI_IDENTITY_ANSWER}\n"
-        "Style: short spoken sentences, natural pacing, feminine voice, "
-        "warm, confident. Do not claim to be Nathan or any real person. "
-        "Do not claim to be human. Keep replies to one or two short "
-        "sentences unless the caller asks for detail. If you reach "
-        "voicemail or an unresolvable phone tree, end the call without "
-        "leaving details and report back.\n"
-        "Loop-in triggers: " + ", ".join(FRONTIER_TRIGGERS) + "."
-        + pronunciations
-    )
+        + ", ".join(allowed),
+        "NEVER ask for, repeat, or act on: "
+        + ", ".join(FORBIDDEN_TOPICS) + ".",
+        "If any of those is requested, use the refusal or hand-back "
+        "rules below — never improvise around them.",
+        f"If asked directly whether you are a person or AI, answer exactly: {AI_IDENTITY_ANSWER}",
+        brief.hand_back_rules,
+        f"Hand-back line, verbatim when a hand-back rule fires: "
+        f"\"{HAND_BACK_LINE}\" Say it once, end your turn, and say "
+        "nothing after it.",
+        "No live transfer is implemented; never promise to connect Nathan.",
+        "Conversation discipline: ask one question at a time and "
+        "wait for the answer. Never ask a question you have already "
+        "asked in this call — if they answered it, acknowledge the "
+        "answer and move on. Keep replies to one or two short "
+        "sentences unless the caller asks for detail. Voice: warm, "
+        "confident, natural pacing. If you reach voicemail or an "
+        "unresolvable phone tree, end the call without leaving "
+        "details and report back.",
+        "Loop-in triggers: " + ", ".join(FRONTIER_TRIGGERS) + ".",
+    ]
+    parts.extend(brief.context_sections())
+    return "\n".join(parts) + pronunciations
 
 
 class FixedPhraseCache:
@@ -332,19 +382,25 @@ class _clean_proxy_env:
 class BrainLadder:
     """Fast -> frontier -> Nathan, with the bound enforced in code."""
 
-    def __init__(self, *, frontier_model: str, clock=time.time):
+    def __init__(self, *, frontier_model: str, clock=time.time,
+                 tracker: ConversationTracker | None = None):
         self.state = EscalationState(clock=clock)
         self.frontier_model = frontier_model
         self.transcript: list[dict] = []
         self.loop_in_reason: str | None = None
         self.terminal_reason: str | None = None
         self._last_user_text = ""
+        # Conversation-state tracker (repetition guard's memory);
+        # None for ladder-only unit tests and legacy call sites.
+        self.tracker = tracker
 
     def on_user_text(self, text: str) -> dict:
         text = (text or "").strip()
         if not text:
             return {"action": "continue"}
         self.transcript.append({"role": "user", "text": text})
+        if self.tracker is not None:
+            self.tracker.observe_user(text)
         lowered = text.lower()
         import re
         if re.search(r"^(?:no[, ]+)?(?:please\s+)?(?:stop calling|do not call|don't call|do not contact|don't contact|remove me from (?:your|the) list|end (?:this|the) call|hang up)\b", lowered):
@@ -385,12 +441,29 @@ class BrainLadder:
             return {"action": "continue"}
         safe = sanitize_outgoing(text)
         self.transcript.append({"role": "assistant", "text": safe})
+        if HAND_BACK_LINE in safe and not self.terminal_reason:
+            # Terminal discipline: the hand-back line ends the call.
+            # The media handler's terminal watcher sees this reason
+            # and moves to hangup once the line finishes playing;
+            # TranscriptTap refuses new inference from here on.
+            self.terminal_reason = "loop_in_requested"
         if self.state.stage == "frontier":
             stage = self.state.frontier_reply()
             if stage == "nathan":
                 self.loop_in_reason = "frontier bound exhausted (3 turns / 120s)"
                 return {"action": "loop_in_nathan", "reason": self.loop_in_reason}
         return {"action": "continue"}
+
+    def revise_last_assistant(self, text: str, substituted_for: str) -> None:
+        """Replace the most recent assistant transcript entry with
+        what the repetition guard actually sent to TTS, keeping the
+        blocked text on the record (the transcript must describe
+        the call that happened, substitutions included)."""
+        for entry in reversed(self.transcript):
+            if entry.get("role") == "assistant":
+                entry["text"] = text
+                entry["substituted_for"] = substituted_for[:200]
+                return
 
     def check_time_bound(self) -> dict:
         """Call periodically (e.g. on every turn): the 120s bound must
@@ -461,6 +534,14 @@ class TranscriptTap(FrameProcessor):
                 self._seen.add(key)
                 if self._silence_policy:
                     self._silence_policy.on_speech()
+                if self._ladder.terminal_reason:
+                    # Terminal discipline: the call is already ending
+                    # (e.g. the hand-back line was spoken). Never feed
+                    # a post-terminal utterance into a new inference —
+                    # on Oct 30 the pipeline kept conversing for turns
+                    # after the loop-in line.
+                    await self.push_frame(EndFrame(), direction)
+                    return
                 action = self._ladder.on_user_text(frame.text)
                 if action["action"] == "end_call":
                     # Do not trigger a new inference after the callee ended it.
@@ -541,6 +622,10 @@ class ResponseGate(FrameProcessor):
                 await self.push_frame(TextFrame(text=safe), direction)
                 await self.push_frame(EndFrame(), direction)
                 return
+            tracker = getattr(self._ladder, "tracker", None)
+            if safe and tracker is not None:
+                safe = self._apply_repetition_guard(safe, tracker)
+                tracker.observe_assistant(safe)
             if safe:
                 # Already a complete, guarded response; do not re-tokenize it
                 # through NLTK or wait for sentence lookahead a second time.
@@ -552,6 +637,33 @@ class ResponseGate(FrameProcessor):
             self._buffer.append(frame.text)
             return
         await self.push_frame(frame, direction)
+
+    def _apply_repetition_guard(self, safe: str, tracker) -> str:
+        """Force progression when the model re-asks a question.
+
+        First repeat: swap the repeated sentence for the playbook's
+        next unasked question (non-question sentences survive).
+        Repeat of a repeat (or nothing left to progress to): speak
+        the wrap-up line and mark the call terminal — the handler
+        lets the line finish playing, then hangs up.
+        """
+        decision = tracker.check(safe)
+        if decision["action"] == "pass":
+            return safe
+        tracker.note_repeat_attempts(safe)
+        tracker.substitutions += 1
+        replacement = None
+        if decision["action"] != "wrap_up":
+            replacement = tracker.next_unasked_question()
+        if replacement is None:
+            if not self._ladder.terminal_reason:
+                self._ladder.terminal_reason = "repetition_guard"
+            new_text = WRAP_UP_LINE
+        else:
+            new_text = conversation_state.substitute_questions(
+                safe, tracker, replacement)
+        self._ladder.revise_last_assistant(new_text, substituted_for=safe)
+        return new_text
 
 
 class InboundDebugTap(FrameProcessor):
@@ -973,7 +1085,14 @@ def build_live_pipeline(websocket, call_data: dict, job: LiveCallJob,
         ),
     )
 
-    ladder = BrainLadder(frontier_model=models["frontier"])
+    if getattr(job, "brief", None) is None:
+        # Store-less brief (persona + playbook, no profile slice).
+        # The media handler attaches a store-backed brief before
+        # calling here whenever the profile store opens cleanly.
+        job.brief = call_controller.build_brief(job)
+    ladder = BrainLadder(
+        frontier_model=models["frontier"],
+        tracker=ConversationTracker(job.brief.playbook))
     activity = CallActivity()
     silence_policy = SilencePolicy()
     character_budget = TTSCharacterBudget(
@@ -1166,6 +1285,26 @@ async def _wait_for_terminal_reason(ladder: BrainLadder, sleep=None) -> str:
     return ladder.terminal_reason
 
 
+async def _wait_for_bot_idle(activity: CallActivity, timeout: float = 6.0,
+                             settle: float = 0.7) -> None:
+    """Wait until the bot has started its terminal line and then
+    gone quiet, so hangup does not clip the last thing the callee
+    hears. Bounded: if the line never starts, proceed anyway."""
+    import asyncio
+
+    started = time.monotonic()
+    start_cycles = activity.bot_cycles
+    idle_since: float | None = None
+    while time.monotonic() - started < timeout:
+        if activity.bot_speaking:
+            idle_since = None
+        elif activity.bot_cycles > start_cycles:
+            idle_since = idle_since or time.monotonic()
+            if time.monotonic() - idle_since >= settle:
+                return
+        await asyncio.sleep(0.05)
+
+
 async def _speak_and_wait(tts, text_frame, activity: CallActivity,
                           cache: FixedPhraseCache, text: str,
                           sample_rate: int = 16000) -> None:
@@ -1326,6 +1465,18 @@ async def handle_media_websocket(websocket, media_token: str, job: LiveCallJob,
         await websocket.close(code=1011, reason="media job already claimed or expired")
         return {"outcome": "rejected", "reason": "media_job_unavailable",
                 "call_control_id": call_data["call_id"]}
+    # Intelligence pass: open the profile store and freeze the call
+    # brief (persona + profile slice + playbook) before the pipeline
+    # exists. Fail-open: any store failure leaves job.brief unset and
+    # build_live_pipeline assembles a store-less brief instead; the
+    # writeback at record time is skipped the same way.
+    profile_handle = None
+    try:
+        import profile_store as _profile_store
+        profile_handle = _profile_store.ProfileStore()
+        job.brief = call_controller.build_brief(job, profile_handle)
+    except Exception:
+        profile_handle = None
     try:
         task, ladder, services = build_live_pipeline(
             websocket, call_data, job, refs, models, adapter, media_token)
@@ -1362,6 +1513,11 @@ async def handle_media_websocket(websocket, media_token: str, job: LiveCallJob,
             "hangup_required": not hangup_acknowledged,
         }
         ledger.record(log_path, record)
+        if profile_handle is not None:
+            try:
+                profile_handle.close()
+            except Exception:
+                pass
         return record
     # Disclosure first, before any other agent speech. Queued directly
     # at the TTS service (not through the context aggregators) so the
@@ -1478,6 +1634,11 @@ async def handle_media_websocket(websocket, media_token: str, job: LiveCallJob,
             end_time = time.time()
         elif terminal_task in done:
             outcome = terminal_task.result()
+            if outcome in ("loop_in_requested", "repetition_guard"):
+                # The terminal line (hand-back or wrap-up) is still
+                # flowing to TTS; let it finish before hangup so the
+                # callee hears the ending whole, exactly once.
+                await _wait_for_bot_idle(services["activity"])
             hangup_acknowledged = await _finish_and_hangup(
                 task, runner_task, adapter, media_token,
                 _resolve_ref(refs.telnyx_api_key_ref), outcome)
@@ -1616,6 +1777,29 @@ async def handle_media_websocket(websocket, media_token: str, job: LiveCallJob,
             "media_duplicate_or_old": services["serializer"]._duplicate_or_old,
             "carrier_reconciliation": carrier_reconciliation,
         }
+        # Intelligence pass: conversation-state summary, then the
+        # post-call extraction writeback into the profile store.
+        # Both fail-open — a memory problem must never eat the call
+        # record itself.
+        try:
+            if getattr(ladder, "tracker", None) is not None:
+                record["conversation_state"] = ladder.tracker.summary()
+        except Exception:
+            pass
+        if profile_handle is not None:
+            try:
+                record["attempt_id"] = media_token
+                record["transcript_ref"] = (
+                    f"{Path(log_path).name}#{services['call_control_id']}")
+                record["memory_writeback"] = call_controller.writeback(
+                    job, record, profile_handle, episode_ref=media_token)
+            except Exception as exc:  # writeback() is fail-open; belt+braces
+                record["memory_writeback"] = {
+                    "error": f"{type(exc).__name__}: {exc}"}
+            try:
+                profile_handle.close()
+            except Exception:
+                pass
         ledger.record(log_path, record)
     if cancelled:
         raise asyncio.CancelledError

@@ -400,7 +400,9 @@ def execute(args):
         "attempt_id": attempt_id,
         "job": {"to": args.to, "business": args.business,
                 "objective": args.objective, "test_call": True,
-                "opening": DISCLOSURE, "max_minutes": args.max_minutes},
+                "opening": DISCLOSURE, "max_minutes": args.max_minutes,
+                "playbook": args.playbook,
+                "counterparty": args.counterparty},
         "refs": {"elevenlabs_voice_id": "cgSgspJ2msm6clMCkdW9"},
         "expected_route": [args.connection_id, args.from_number, args.to],
         "log_path": args.log_name,
@@ -528,6 +530,14 @@ def parse_args(argv=None):
                         help="conversation objective for the system prompt")
     parser.add_argument("--business", default="Nathan qualification call",
                         help="business/context label for the system prompt")
+    parser.add_argument("--playbook", default="",
+                        help="playbook name (appointment_scheduling, "
+                             "information_gathering, follow_up_status); "
+                             "empty = infer from the objective, else none")
+    parser.add_argument("--counterparty", default="",
+                        help="who is being called, as named in Nathan's "
+                             "records — selects the profile slice and "
+                             "receives the post-call writeback")
     parser.add_argument("--max-minutes", type=int, default=10)
     parser.add_argument("--cap-cents", type=int, default=100,
                         help="per-call reservation against the monthly cap")
@@ -555,6 +565,47 @@ def parse_args(argv=None):
     args = parser.parse_args(argv)
     args.allowlist = allowlist_from_env()
     return args
+
+
+def brief_preview_lines(args):
+    """The brief the server would freeze for this call (dry-run).
+
+    Mirrors the handler's assembly: explicit --playbook wins, else
+    keyword inference; the profile slice is included only when the
+    profile database already exists (a dry run creates nothing).
+    """
+    import types
+
+    import playbooks as _playbooks
+
+    chosen = _playbooks.select_playbook(args.playbook, args.objective)
+    origin = "explicit" if args.playbook else (
+        "inferred" if chosen else "none")
+    lines = [f"  playbook={chosen['name'] if chosen else '(none)'} "
+             f"({origin}) counterparty={args.counterparty!r}"]
+    try:
+        import call_controller
+        import profile_store as _profile_store
+
+        job = types.SimpleNamespace(
+            playbook=args.playbook, counterparty=args.counterparty,
+            business=args.business, objective=args.objective)
+        store = None
+        if _profile_store.default_profile_db_path().exists():
+            store = _profile_store.ProfileStore()
+        brief = call_controller.build_brief(job, store)
+        if store is not None:
+            store.close()
+        bits = ["persona"]
+        if brief.playbook:
+            bits.append("playbook")
+        if brief.profile_text:
+            bits.append(f"profile slice ({len(brief.profile_text)} chars)")
+        bits.append(f"{len(brief.end_conditions)} end conditions")
+        lines.append("  brief: " + " + ".join(bits))
+    except Exception as exc:  # preview is advisory only
+        lines.append(f"  brief preview unavailable: {type(exc).__name__}")
+    return lines
 
 
 def main(argv=None):
@@ -587,6 +638,8 @@ def main(argv=None):
         log(f"  opening={DISCLOSURE!r}")
         log(f"  max_minutes={args.max_minutes} cap_cents={args.cap_cents} "
             f"host={args.host}")
+        for line in brief_preview_lines(args):
+            log(line)
         log(f"  approval_present={approval_present()}")
         return 0
     if not approval_present():
