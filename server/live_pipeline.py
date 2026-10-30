@@ -425,6 +425,9 @@ class TranscriptTap(FrameProcessor):
         self._silence_policy = silence_policy
 
     async def process_frame(self, frame, direction):
+        # Required: base class creates this processor's frame task on
+        # StartFrame; without it Data/Control frames are never processed.
+        await super().process_frame(frame, direction)
         if _PIPECAT_FRAMES and direction == FrameDirection.DOWNSTREAM:
             if self._side == "user" and isinstance(frame, TranscriptionFrame):
                 if not getattr(frame, "finalized", False):
@@ -480,6 +483,9 @@ class ResponseGate(FrameProcessor):
         self._character_budget = character_budget
 
     async def process_frame(self, frame, direction):
+        # Required: base class creates this processor's frame task on
+        # StartFrame; without it Data/Control frames are never processed.
+        await super().process_frame(frame, direction)
         if not _PIPECAT_FRAMES or direction != FrameDirection.DOWNSTREAM:
             await self.push_frame(frame, direction)
             return
@@ -544,6 +550,9 @@ class InboundDebugTap(FrameProcessor):
         self._activity = activity
 
     async def process_frame(self, frame, direction):
+        # Required: base class creates this processor's frame task on
+        # StartFrame; without it Data/Control frames are never processed.
+        await super().process_frame(frame, direction)
         if _PIPECAT_FRAMES and direction == FrameDirection.DOWNSTREAM:
             if self._mode == "frames" and isinstance(frame, InputAudioRawFrame):
                 self._count += 1
@@ -569,6 +578,13 @@ class BotActivityTap(FrameProcessor):
         self._activity = activity
 
     async def process_frame(self, frame, direction):
+        # Required: base class creates this processor's frame task on
+        # StartFrame; without it Data/Control frames are never processed.
+        # This omission was the master defect behind the silent live
+        # calls: TTSStarted/TTSStopped are ControlFrames, so they queued
+        # here forever, bot activity never registered, and no audio ever
+        # reached the transport (bench-proven Oct 30, 2026).
+        await super().process_frame(frame, direction)
         from pipecat.frames.frames import TTSStartedFrame, TTSStoppedFrame
         if isinstance(frame, TTSStartedFrame):
             self._activity.bot_started()
@@ -588,6 +604,9 @@ class InputAudioRechunker(FrameProcessor):
         self._buffer = bytearray()
 
     async def process_frame(self, frame, direction):
+        # Required: base class creates this processor's frame task on
+        # StartFrame; without it Data/Control frames are never processed.
+        await super().process_frame(frame, direction)
         if (direction == FrameDirection.DOWNSTREAM
                 and isinstance(frame, InputAudioRawFrame)):
             if frame.sample_rate != self.sample_rate or frame.num_channels != self.channels:
@@ -669,10 +688,35 @@ class CachedElevenLabsTTSService:
             async def run_tts(self, text, context_id):
                 cached = cache.load(text) if text in fixed_phrases else None
                 if cached is not None:
+                    # Pipecat 1.8 context contract (tts_process_generator
+                    # docstring): frames yielded by run_tts are appended
+                    # to an audio context that run_tts itself must create
+                    # first — the websocket base service does this in its
+                    # own run_tts before yielding TTSStartedFrame, and the
+                    # base _push_tts_frames does not (push_start_frame is
+                    # False for websocket services). The original cache
+                    # branch yielded audio without creating the context,
+                    # so every chunk was dropped with "unable to append
+                    # audio to context" and every cached fixed phrase —
+                    # the disclosure, the reprompt, the goodbye, the
+                    # loop-in and refusal lines — was silently never
+                    # spoken on live calls (Oct 30, 2026, calls #2-#5).
+                    # Mirror the base service: create the context, yield
+                    # start, audio, stop, then mark the context complete
+                    # exactly as its receive loop does on isFinal.
+                    from pipecat.frames.frames import (
+                        TTSStartedFrame,
+                        TTSStoppedFrame,
+                    )
+                    if not self.audio_context_available(context_id):
+                        await self.create_audio_context(context_id)
+                        yield TTSStartedFrame(context_id=context_id)
                     for offset in range(0, len(cached), 6400):
                         yield TTSAudioRawFrame(
                             cached[offset:offset + 6400], self.sample_rate, 1,
                             context_id=context_id)
+                    yield TTSStoppedFrame(context_id=context_id)
+                    await self.remove_audio_context(context_id)
                     return
                 captured = bytearray()
                 async for frame in super().run_tts(text, context_id):
@@ -985,6 +1029,7 @@ def build_live_pipeline(websocket, call_data: dict, job: LiveCallJob,
     return task, ladder, {"stt": stt, "llm": llm, "tts": tts,
                           "serializer": serializer,
                           "activity": activity,
+                          "silence_policy": silence_policy,
                           "character_budget": character_budget,
                           "phrase_cache": phrase_cache,
                           "call_control_id": call_control_id,
@@ -1275,8 +1320,31 @@ async def handle_media_websocket(websocket, media_token: str, job: LiveCallJob,
             services["activity"], services["phrase_cache"], text)
 
     silence_task = asyncio.create_task(_wait_for_silence(
-        services["activity"], silence_policy,
+        services["activity"], services["silence_policy"],
         float(os.environ.get("AI_CALLING_SILENCE_SECONDS", "12")), reprompt))
+    # Start-order gate for the disclosure queued below. That queue goes
+    # directly to the TTS service, bypassing the pipeline, so nothing
+    # orders it after StartFrame — and if the TTS service processes it
+    # before its own start() runs, Pipecat's _create_audio_context_task
+    # replaces the audio-context table and the disclosure's context is
+    # orphaned: its frames are accepted into a queue nobody drains, and
+    # zero bytes reach the transport (bench-proven Oct 30, 2026:
+    # "Generating TTS" for the disclosure landed 8 ms BEFORE
+    # "StartFrame reached the end of the pipeline"). The worker drains
+    # its push queue only after StartFrame completes, so a flush
+    # probe's round trip is the framework's own proof that every
+    # processor — TTS start() included — has run. Other direct-TTS
+    # queues in this handler (reprompt, goodbye, loop-in) happen
+    # mid-call, long after start, and need no gate.
+    try:
+        pipeline_started = await task.flush_pipeline()
+    except Exception:
+        pipeline_started = False
+        logger.exception("pipeline flush failed for attempt {}", media_token)
+    if not pipeline_started:
+        logger.warning(
+            "pipeline start unconfirmed for attempt {}; "
+            "queueing disclosure anyway", media_token)
     outcome = "completed"
     end_time = None
     cancelled = False

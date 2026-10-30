@@ -41,6 +41,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
+from loguru import logger
 
 from telnyx_adapter import AdapterConfig, TelnyxAdapter
 from telnyx_webhook import WEBHOOK_PATHS, adapter_event_data
@@ -330,6 +331,10 @@ async def media_socket(websocket: WebSocket, attempt_id: str):
     except WebSocketDisconnect:
         pass
     except Exception:
+        # Never swallow silently: a handler death here closes the
+        # media stream with 1011 and, unlogged, looks exactly like a
+        # silent call with no record (Oct 30, 2026, calls #2-#5).
+        logger.exception("media handler failed for attempt {}", attempt_id)
         try:
             await websocket.close(code=1011, reason="media handler error")
         except Exception:
