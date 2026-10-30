@@ -1142,10 +1142,46 @@ def build_live_pipeline(websocket, call_data: dict, job: LiveCallJob,
                     " <- ".join(chain) or str(getattr(frame, "error", ""))[:160])
             except Exception:
                 pass
-        llm = GoogleLLMService(
-            api_key=_resolve_ref(refs.gemini_api_key_ref),
-            settings=GoogleLLMService.Settings(model=models["fast"]),
-        )
+        # LLM failover (llm_failover.py): the resolved fast model is
+        # one entry in an env-pool chain, not the whole brain. On
+        # Oct 30 the primary fast model 503'd every turn of a live
+        # call while pool[1] sat healthy and uninstantiated — the
+        # turn path must be able to move. The mixin is composed
+        # dynamically over whatever GoogleLLMService resolves to
+        # here, so provider patching in the offline suites (which
+        # swaps that name for a fake) keeps its exact old behavior:
+        # a fake base never calls _stream_response, and the extra
+        # constructor kwarg is consumed by the mixin itself.
+        from llm_failover import LLMFailoverMixin, model_chain
+        _chain = model_chain(models["fast"], models.get("frontier"))
+        if len(_chain) > 1:
+            _llm_kwargs = {}
+            if GoogleLLMService.__name__ == "GoogleLLMService":
+                # The chain IS the retry policy: the SDK gets one
+                # attempt per model, so a dead model surfaces its
+                # error in seconds and the chain moves — not after
+                # a long backoff spent re-asking the model that is
+                # down (with SDK retries left at default, the
+                # Oct 30 offline repro measured ~45s per doomed
+                # turn; with attempts=2 the failover turn still
+                # took ~16s).
+                from google.genai import types as _genai_types
+                _llm_kwargs["http_options"] = _genai_types.HttpOptions(
+                    retry_options=_genai_types.HttpRetryOptions(attempts=1))
+            _failover_cls = type(
+                "FailoverGoogleLLMService",
+                (LLMFailoverMixin, GoogleLLMService), {})
+            llm = _failover_cls(
+                api_key=_resolve_ref(refs.gemini_api_key_ref),
+                settings=GoogleLLMService.Settings(model=models["fast"]),
+                model_pool=_chain,
+                **_llm_kwargs,
+            )
+        else:
+            llm = GoogleLLMService(
+                api_key=_resolve_ref(refs.gemini_api_key_ref),
+                settings=GoogleLLMService.Settings(model=models["fast"]),
+            )
         tts = CachedElevenLabsTTSService.create(
             ElevenLabsTTSService,
             cache=phrase_cache,
@@ -1784,6 +1820,21 @@ async def handle_media_websocket(websocket, media_token: str, job: LiveCallJob,
         try:
             if getattr(ladder, "tracker", None) is not None:
                 record["conversation_state"] = ladder.tracker.summary()
+        except Exception:
+            pass
+        # LLM failover evidence (llm_failover.py): present whenever
+        # the brain was built with a model chain, so a silent-model
+        # incident is diagnosable from the record alone.
+        try:
+            _llm_service = services.get("llm")
+            if _llm_service is not None and hasattr(
+                    _llm_service, "failover_events"):
+                record["llm_failover"] = {
+                    "events": _llm_service.failover_events,
+                    "model_used": getattr(_llm_service, "active_model", None),
+                    "chain": list(getattr(_llm_service, "_model_pool", [])),
+                    "switches": getattr(_llm_service, "failover_log", []),
+                }
         except Exception:
             pass
         if profile_handle is not None:
