@@ -303,6 +303,10 @@ def writeback(job, record: dict, store, decider: ControllerDecider | None = None
             counterparty_name=getattr(job, "counterparty", "")
             or getattr(job, "business", "") or "")
         counterparty = brief_stub.counterparty_name
+        if counterparty:
+            # First contact creates the entity; without this, facts
+            # about a new counterparty have nowhere to land.
+            store.get_or_create_entity("business", counterparty)
         episode_id = store.record_episode(
             ref=episode_ref or f"call:{record.get('attempt_id', 'unknown')}",
             counterparty=counterparty or None,
