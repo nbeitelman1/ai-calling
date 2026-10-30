@@ -4,6 +4,16 @@ idempotent webhook acceptance, and bounded hangup.
 State machine (attempts):
     prepared -> submit_unknown -> initiated -> answered -> hangup
     prepared -> cancelled_before_submit   (stop before claim only)
+    submit_unknown|initiated -> closed_unsubmitted
+        (operator-attested resolution only -- never an evidence path.
+        resolve_attempt_unsubmitted() requires zero stored events for
+        the attempt, no carrier-verified create response on record,
+        and a recorded operator attestation with an evidence reference
+        in attempt_resolutions. It exists for submissions the carrier
+        refused before acceptance and for attempts that were never
+        carrier submissions at all: cases no signed event or verified
+        response can ever arrive for. It must never close an attempt
+        that may have become a real call.)
 
 Rules that must not be weakened:
 - prepare() persists the job, the attempt, the exact dial payload, the
@@ -45,7 +55,7 @@ import math
 import sqlite3
 import time
 from contextlib import contextmanager
-from uuid import NAMESPACE_URL, uuid5
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from .config import AdapterConfig, Approval
 from .verify import WebhookRejected, verify_webhook
@@ -60,7 +70,8 @@ from .wire import (
 )
 
 _LIFECYCLE_RANK = {"call.initiated": 1, "call.answered": 2, "call.hangup": 3}
-_STATE_RANK = {"submit_unknown": 0, "initiated": 1, "answered": 2, "hangup": 3}
+_STATE_RANK = {"submit_unknown": 0, "initiated": 1, "answered": 2, "hangup": 3,
+               "closed_unsubmitted": 3}
 _STATE_FROM_EVENT = {"call.initiated": "initiated", "call.answered": "answered", "call.hangup": "hangup"}
 
 _SCHEMA = """
@@ -90,7 +101,36 @@ CREATE TABLE IF NOT EXISTS media_jobs(
 CREATE TABLE IF NOT EXISTS quota_ledger(
   name TEXT NOT NULL, period TEXT NOT NULL, used REAL NOT NULL,
   PRIMARY KEY(name,period));
+CREATE TABLE IF NOT EXISTS attempt_resolutions(
+  attempt_id TEXT PRIMARY KEY, prior_state TEXT NOT NULL,
+  basis TEXT NOT NULL, operator TEXT NOT NULL,
+  evidence_ref TEXT NOT NULL, attestation TEXT NOT NULL,
+  created_at REAL NOT NULL);
 """
+
+
+def _ids_are_fabricated(bound) -> bool:
+    """True only when every bound id fails the carrier's issued shapes.
+
+    Carrier control ids carry the 'v3:' version prefix and carrier leg
+    and session ids are UUIDs. A binding that matches neither shape on
+    any of the three ids (e.g. a test harness's fabricated 'bench-...'
+    ids) demonstrably did not come from a carrier create response.
+    Any doubt returns False: partially bound or carrier-shaped ids are
+    treated as a real create response on record.
+    """
+    control_id, leg_id, session_id = bound
+    if not control_id or control_id.startswith("v3:"):
+        return False
+    for value in (leg_id, session_id):
+        if not value:
+            return False
+        try:
+            UUID(value)
+        except (ValueError, AttributeError, TypeError):
+            continue
+        return False
+    return True
 
 
 class SubmissionUnknown(RuntimeError):
@@ -291,6 +331,107 @@ class TelnyxAdapter:
         conn.execute(
             "UPDATE attempts SET control_id=?,leg_id=?,session_id=? WHERE attempt_id=?",
             (*ids, row["attempt_id"]))
+
+    # -- operator-attested resolution (no carrier evidence can exist) ----
+
+    @staticmethod
+    def _correlated_event_count(conn, row) -> int:
+        """Stored events correlated to this attempt, by the same rule
+        _apply uses: the bound control id, or a client_state hint
+        naming this attempt. An undecodable hint names nothing."""
+        count = 0
+        for event in conn.execute("SELECT data_json FROM events").fetchall():
+            payload = json.loads(event["data_json"]).get("payload", {})
+            if row["control_id"] and payload.get("call_control_id") == row["control_id"]:
+                count += 1
+                continue
+            hint = None
+            if payload.get("client_state"):
+                try:
+                    hint = decode_client_state(payload["client_state"])
+                except Exception:
+                    hint = None
+            if hint is not None and hint == row["attempt_id"]:
+                count += 1
+        return count
+
+    def resolve_attempt_unsubmitted(self, attempt_id: str, *, basis: str,
+                                    operator: str, evidence_ref: str,
+                                    attestation: str) -> dict:
+        """Terminally close an attempt that never became a carrier call.
+
+        This is an operator attestation, not evidence processing, and
+        every guard must hold in one transaction:
+
+        - basis is 'carrier_refused' (the carrier refused the
+          submission before acceptance) or 'not_a_carrier_attempt'
+          (the attempt was never submitted to the carrier at all);
+        - operator, evidence_ref and attestation are present; the
+          attestation is stored verbatim in attempt_resolutions;
+        - the attempt is in submit_unknown or initiated and has no
+          recorded resolution yet;
+        - zero stored webhook events correlate to the attempt;
+        - no carrier-verified create response is on record: for
+          'carrier_refused' the attempt must still be submit_unknown
+          with nothing bound (this adapter binds ids only from a
+          create response or an event, and there are no events); for
+          'not_a_carrier_attempt', any bound ids must be demonstrably
+          fabricated (see _ids_are_fabricated).
+
+        On success the attempt moves to closed_unsubmitted, which the
+        submission gate does not count and media attach refuses. Any
+        bound ids stay on the attempt row, untouched, for audit.
+        """
+        check_identifier(operator)
+        check_identifier(evidence_ref)
+        if basis not in ("carrier_refused", "not_a_carrier_attempt"):
+            raise ValueError("unknown resolution basis")
+        if not isinstance(attestation, str) or not attestation.strip():
+            raise ValueError("an attestation is required")
+        if len(attestation) > 4096:
+            raise ValueError("attestation is oversized")
+        with self._tx() as conn:
+            row = conn.execute(
+                "SELECT * FROM attempts WHERE attempt_id=?", (attempt_id,)).fetchone()
+            if not row:
+                raise ValueError("unknown attempt")
+            if row["state"] not in ("submit_unknown", "initiated"):
+                raise ValueError("attempt is not in a resolvable state")
+            existing = conn.execute(
+                "SELECT 1 FROM attempt_resolutions WHERE attempt_id=?",
+                (attempt_id,)).fetchone()
+            if existing:
+                raise ValueError("attempt already has a recorded resolution")
+            if self._correlated_event_count(conn, row):
+                raise ValueError("stored webhook events exist for this attempt")
+            bound = (row["control_id"], row["leg_id"], row["session_id"])
+            if basis == "carrier_refused":
+                if row["state"] != "submit_unknown" or any(bound):
+                    raise ValueError(
+                        "carrier_refused requires an unbound submit_unknown attempt")
+            elif any(bound) and not _ids_are_fabricated(bound):
+                raise ValueError(
+                    "bound ids are carrier-shaped: a create response is on record")
+            created = self.clock()
+            conn.execute(
+                "INSERT INTO attempt_resolutions(attempt_id,prior_state,basis,"
+                "operator,evidence_ref,attestation,created_at) VALUES(?,?,?,?,?,?,?)",
+                (attempt_id, row["state"], basis, operator, evidence_ref,
+                 attestation, created))
+            conn.execute(
+                "UPDATE attempts SET state=? WHERE attempt_id=?",
+                ("closed_unsubmitted", attempt_id))
+            return {"attempt_id": attempt_id, "prior_state": row["state"],
+                    "state": "closed_unsubmitted", "basis": basis,
+                    "operator": operator, "evidence_ref": evidence_ref,
+                    "created_at": created}
+
+    def get_attempt_resolution(self, attempt_id: str) -> dict | None:
+        with self._tx() as conn:
+            row = conn.execute(
+                "SELECT * FROM attempt_resolutions WHERE attempt_id=?",
+                (attempt_id,)).fetchone()
+            return dict(row) if row else None
 
     # -- webhooks: durable acceptance, then idempotent processing -------
 
