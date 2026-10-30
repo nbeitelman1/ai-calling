@@ -76,9 +76,11 @@ class OfflineElevenLabs(ElevenLabsTTSService):
 
 
 class Adapter:
-    def __init__(self):
+    def __init__(self, hangup_event=False, hangup_source=None):
         self.claimed=False
         self.settled=None
+        self._hangup_event=hangup_event
+        self._hangup_source=hangup_source
     def get_attempt(self,_):
         return {'state':'answered','control_id':'control-offline','hangup_ack':False,
                 'payload_json':json.dumps({'connection_id':'conn','from':'+12025550100','to':'+12025550101'})}
@@ -90,7 +92,8 @@ class Adapter:
     def settle_media_job_quotas(self,_,actual):
         self.settled=actual
     def reconcile_call_record(self,_):
-        return {'answered_event':True,'hangup_event':False}
+        return {'answered_event':True,'hangup_event':self._hangup_event,
+                'hangup_source':self._hangup_source}
 
 
 class TestOfflineMediaSession(unittest.IsolatedAsyncioTestCase):
@@ -192,6 +195,63 @@ class TestOfflineMediaSession(unittest.IsolatedAsyncioTestCase):
                         'llm_requests':captured['services']['llm'].context_requests,
                         'cleanup_pending_tasks':record['cleanup_pending_tasks'],
                         'carrier_playback_verified':False}))
+                finally:
+                    if not running.done():
+                        running.cancel()
+                    await asyncio.gather(running,return_exceptions=True)
+
+    async def test_socket_close_after_signed_hangup_records_hangup(self):
+        # Same wire flow as the genuine-drop test above, but the
+        # adapter's reconciliation reports a signed call.hangup from
+        # the callee: the record must say "hangup", not
+        # "media_disconnected" (the Oct 30 live-call label defect).
+        incoming=asyncio.Queue()
+        outputs=[]
+        audio_seen=asyncio.Event()
+        async def send(message):
+            outputs.append(message)
+            if message['type']=='websocket.send':
+                payload=json.loads(message.get('text','{}'))
+                if payload.get('event')=='media':
+                    audio_seen.set()
+        websocket=WebSocket({'type':'websocket','path':'/telnyx/media/offline',
+                            'headers':[],'query_string':b''},incoming.get,send)
+        await incoming.put({'type':'websocket.connect'})
+        await websocket.accept()
+        for message in [{'event':'connected','version':'1.0.0'},
+                        {'event':'start','sequence_number':'1','stream_id':'stream-offline',
+                         'start':{'call_control_id':'control-offline',
+                                  'media_format':{'encoding':'PCMU','sample_rate':8000,'channels':1}}}]:
+            await incoming.put({'type':'websocket.receive','text':json.dumps(message)})
+        with tempfile.TemporaryDirectory() as tmp:
+            env={'GROQ_API_KEY':'offline','GEMINI_API_KEY':'offline',
+                 'ELEVENLABS_API_KEY':'offline','TELNYX_API_KEY':'offline',
+                 'AI_CALLING_PHRASE_CACHE':tmp,'ELEVENLABS_TTS_MODELS':'offline',
+                 'ELEVENLABS_SAMPLE_RATE':'16000','AI_CALLING_START_TIMEOUT_SECONDS':'5'}
+            refs=live.LiveCredentialRefs(elevenlabs_voice_id='offline')
+            job=live.LiveCallJob(to='+12025550101',business='Offline',objective='Offline',max_minutes=1)
+            cache=live.FixedPhraseCache(tmp,namespace='offline/offline/pcm_16000')
+            cache.store(job.opening,tone())
+            adapter=Adapter(hangup_event=True, hangup_source='callee')
+            with patch.dict(os.environ,env), \
+                 patch('pipecat.services.groq.stt.GroqSTTService',OfflineSTT), \
+                 patch('pipecat.services.google.llm.GoogleLLMService',OfflineLLM), \
+                 patch('pipecat.services.elevenlabs.tts.ElevenLabsTTSService',OfflineElevenLabs), \
+                 patch.object(live,'_hangup_via_adapter',new=AsyncMock(return_value=True)):
+                running=asyncio.create_task(live.handle_media_websocket(
+                    websocket,'offline',job,refs,adapter,
+                    ('conn','+12025550100','+12025550101'),str(Path(tmp)/'session.jsonl'),
+                    models={'fast':'offline','frontier':'offline','stt':'offline'}))
+                try:
+                    await asyncio.wait_for(audio_seen.wait(),5)
+                    await incoming.put({'type':'websocket.disconnect','code':1000})
+                    record=await asyncio.wait_for(asyncio.shield(running),8)
+                    self.assertEqual(record['outcome'],'hangup')
+                    self.assertEqual(
+                        record['carrier_reconciliation']['hangup_source'],'callee')
+                    self.assertFalse(record['hangup_required'])
+                    self.assertTrue(record['pipeline_started'])
+                    self.assertIsNotNone(adapter.settled)
                 finally:
                     if not running.done():
                         running.cancel()

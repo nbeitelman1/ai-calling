@@ -327,11 +327,14 @@ async def media_socket(websocket: WebSocket, attempt_id: str):
             websocket.headers, PUBLIC_KEY,
             os.environ.get("AI_CALLING_PUBLIC_HOST", ""), attempt_id,
             query=websocket.scope.get("query_string", b""))
-    except (ValueError, TypeError):
+    except (ValueError, TypeError) as exc:
         # Reject before accept/claim/provider work. Route IDs are correlation,
         # not authentication. There is deliberately no unsigned debug bypass.
+        logger.warning("media upgrade rejected attempt={} type={}",
+                       attempt_id, type(exc).__name__)
         await websocket.close(code=1008, reason="media authentication failed")
         return
+    logger.info("media-stage signature_verified attempt={}", attempt_id)
     await websocket.accept()
     entry = peek_media_job(attempt_id)
     if entry is None:

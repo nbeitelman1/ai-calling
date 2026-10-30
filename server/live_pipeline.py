@@ -1000,6 +1000,29 @@ def build_live_pipeline(websocket, call_data: dict, job: LiveCallJob,
             api_key=_resolve_ref(refs.groq_api_key_ref),
             settings=GroqSTTService.Settings(model=models["stt"]),
         )
+
+        @stt.event_handler("on_error")
+        async def _log_stt_error(_service, frame):
+            # Pipecat's own log line carries only the SDK wrapper's
+            # text ("Connection error."), which on Oct 30 hid the real
+            # cause (an httpx InvalidURL chained under openai's
+            # APIConnectionError) for hours. Name the exception chain
+            # so the journal shows what actually failed. An error
+            # handler must never raise.
+            try:
+                exc = getattr(frame, "exception", None)
+                chain = []
+                seen = set()
+                while exc is not None and id(exc) not in seen and len(chain) < 4:
+                    seen.add(id(exc))
+                    chain.append(f"{type(exc).__name__}: {str(exc)[:160]}")
+                    exc = exc.__cause__ or exc.__context__
+                logger.warning(
+                    "stt-service error attempt={} chain={}",
+                    attempt_id,
+                    " <- ".join(chain) or str(getattr(frame, "error", ""))[:160])
+            except Exception:
+                pass
         llm = GoogleLLMService(
             api_key=_resolve_ref(refs.gemini_api_key_ref),
             settings=GoogleLLMService.Settings(model=models["fast"]),
@@ -1241,6 +1264,22 @@ async def _finish_and_hangup(task, runner_task, adapter, attempt_id: str,
     if attempt.get("hangup_ack"):
         return True
     return await _hangup_via_adapter(adapter, attempt_id, api_key, reason)
+
+
+def _disconnect_record_outcome(outcome: str, reconciliation: dict) -> str:
+    """Name a media-socket ending for the session record.
+
+    The socket closing is transport, not truth: when a signed
+    call.hangup is on record, the call itself ended -- see
+    carrier_reconciliation's hangup_source for who ended it -- and
+    the record says "hangup". Only a socket that closed with no
+    signed hangup on record is a genuine media drop and keeps
+    "media_disconnected". (Both Oct 30 live calls were callee
+    hangups whose records read media_disconnected before this split.)
+    """
+    if outcome == "media_disconnected" and reconciliation.get("hangup_event"):
+        return "hangup"
+    return outcome
 
 
 async def handle_media_websocket(websocket, media_token: str, job: LiveCallJob,
@@ -1536,6 +1575,7 @@ async def handle_media_websocket(websocket, media_token: str, job: LiveCallJob,
         except Exception:
             carrier_reconciliation = {"answered_event": False,
                                       "hangup_event": False}
+        outcome = _disconnect_record_outcome(outcome, carrier_reconciliation)
         try:
             adapter.settle_media_job_quotas(
                 media_token,
