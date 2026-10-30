@@ -1,16 +1,20 @@
-"""Operator-attested resolution of attempts that never became calls.
+"""Operator-attested resolution of attempts evidence cannot close.
 
 Thin CLI over TelnyxAdapter.resolve_attempt_unsubmitted. Every guard
 lives in the adapter; this tool only collects the attestation inputs
-(operator, resolution basis, evidence reference, attestation text) and
-prints the recorded receipt per attempt. It never dials, never ingests
-or processes events, and never touches an attempt the adapter refuses.
-Exit status is nonzero if any named attempt was refused.
+(operator, resolution basis, evidence reference, attestation text)
+and prints the recorded receipt per attempt. For basis
+'carrier_record_verified' on a live call (shape A), --hangup-at
+carries the carrier record's end time as an ISO 8601 timestamp. It
+never dials, never ingests or processes events, and never touches an
+attempt the adapter refuses. Exit status is nonzero if any named
+attempt was refused.
 """
 import argparse
 import json
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "server"))
@@ -24,14 +28,24 @@ def main():
     parser.add_argument("--attempt", action="append", required=True,
                         dest="attempts", help="attempt id; repeatable")
     parser.add_argument("--basis", required=True,
-                        choices=("carrier_refused", "not_a_carrier_attempt"))
+                        choices=("carrier_refused", "not_a_carrier_attempt",
+                                 "carrier_record_verified"))
     parser.add_argument("--operator", required=True,
                         help="who attests, as a reference, not a secret")
     parser.add_argument("--evidence-ref", required=True,
                         help="pointer to the evidence behind the attestation")
     parser.add_argument("--attestation", required=True,
                         help="attestation text, stored verbatim with the attempt")
+    parser.add_argument("--hangup-at", default=None,
+                        help="carrier-recorded hangup time, ISO 8601 with timezone"
+                             " (basis carrier_record_verified, live-call shape only)")
     args = parser.parse_args()
+    carrier_hangup_at = None
+    if args.hangup_at is not None:
+        parsed = datetime.fromisoformat(args.hangup_at.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parser.error("--hangup-at must carry a timezone")
+        carrier_hangup_at = parsed.timestamp()
     adapter = TelnyxAdapter(
         args.db, os.environ.get("TELNYX_WEBHOOK_PUBLIC_KEY", ""), AdapterConfig())
     exit_code = 0
@@ -39,7 +53,8 @@ def main():
         try:
             receipt = adapter.resolve_attempt_unsubmitted(
                 attempt_id, basis=args.basis, operator=args.operator,
-                evidence_ref=args.evidence_ref, attestation=args.attestation)
+                evidence_ref=args.evidence_ref, attestation=args.attestation,
+                carrier_hangup_at=carrier_hangup_at)
             print(json.dumps({"resolved": True, **receipt}, sort_keys=True))
         except Exception as exc:
             exit_code = 1

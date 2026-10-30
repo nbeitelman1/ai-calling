@@ -14,6 +14,14 @@ State machine (attempts):
         carrier submissions at all: cases no signed event or verified
         response can ever arrive for. It must never close an attempt
         that may have become a real call.)
+    answered -> hangup; submit_unknown -> closed_unsubmitted
+        (basis 'carrier_record_verified' of the same method: the
+        operator attests to a carrier call record instead of to the
+        absence of evidence. Shape A closes a live call whose
+        terminal signed event was never stored, taking hangup_at
+        from the carrier record; shape B closes an unbound
+        submit_unknown attempt that a carrier records search proves
+        never became a call. See the method docstring.)
 
 Rules that must not be weakened:
 - prepare() persists the job, the attempt, the exact dial payload, the
@@ -332,7 +340,28 @@ class TelnyxAdapter:
             "UPDATE attempts SET control_id=?,leg_id=?,session_id=? WHERE attempt_id=?",
             (*ids, row["attempt_id"]))
 
-    # -- operator-attested resolution (no carrier evidence can exist) ----
+    # -- operator-attested resolution ------------------------------------
+
+    @staticmethod
+    def _correlated_events(conn, row) -> list:
+        """Parsed stored events correlated to this attempt, by the
+        same rule _apply uses (see _correlated_event_count)."""
+        events = []
+        for event in conn.execute("SELECT data_json FROM events").fetchall():
+            data = json.loads(event["data_json"])
+            payload = data.get("payload", {})
+            if row["control_id"] and payload.get("call_control_id") == row["control_id"]:
+                events.append(data)
+                continue
+            hint = None
+            if payload.get("client_state"):
+                try:
+                    hint = decode_client_state(payload["client_state"])
+                except Exception:
+                    hint = None
+            if hint is not None and hint == row["attempt_id"]:
+                events.append(data)
+        return events
 
     @staticmethod
     def _correlated_event_count(conn, row) -> int:
@@ -357,19 +386,23 @@ class TelnyxAdapter:
 
     def resolve_attempt_unsubmitted(self, attempt_id: str, *, basis: str,
                                     operator: str, evidence_ref: str,
-                                    attestation: str) -> dict:
-        """Terminally close an attempt that never became a carrier call.
+                                    attestation: str,
+                                    carrier_hangup_at: float | None = None) -> dict:
+        """Terminally close an attempt on an operator attestation.
 
         This is an operator attestation, not evidence processing, and
-        every guard must hold in one transaction:
+        every guard must hold in one transaction. operator,
+        evidence_ref and attestation are always required; the
+        attestation is stored verbatim in attempt_resolutions, and an
+        attempt with a recorded resolution cannot be resolved again.
+
+        Bases 'carrier_refused' and 'not_a_carrier_attempt' close an
+        attempt that never became a carrier call:
 
         - basis is 'carrier_refused' (the carrier refused the
           submission before acceptance) or 'not_a_carrier_attempt'
           (the attempt was never submitted to the carrier at all);
-        - operator, evidence_ref and attestation are present; the
-          attestation is stored verbatim in attempt_resolutions;
-        - the attempt is in submit_unknown or initiated and has no
-          recorded resolution yet;
+        - the attempt is in submit_unknown or initiated;
         - zero stored webhook events correlate to the attempt;
         - no carrier-verified create response is on record: for
           'carrier_refused' the attempt must still be submit_unknown
@@ -378,53 +411,134 @@ class TelnyxAdapter:
           'not_a_carrier_attempt', any bound ids must be demonstrably
           fabricated (see _ids_are_fabricated).
 
-        On success the attempt moves to closed_unsubmitted, which the
-        submission gate does not count and media attach refuses. Any
-        bound ids stay on the attempt row, untouched, for audit.
+        Basis 'carrier_record_verified' instead rests on a carrier
+        call record the operator cites in evidence_ref/attestation,
+        and matches exactly one of two shapes:
+
+        - Shape A (lost terminal event): the attempt is answered,
+          carries a bound carrier control id, and has stored signed
+          events proving the call was live -- but no stored
+          call.hangup event, so the signed-evidence path can never
+          complete it (e.g. the event's delivery was lost). The
+          operator must supply carrier_hangup_at, the end time from
+          the carrier record; the attempt moves to hangup with that
+          hangup_at. If a call.hangup event IS stored, this basis
+          refuses: process the event instead.
+        - Shape B (no carrier call created): the attempt is
+          submit_unknown, unbound, and has zero stored events, and
+          the attestation cites a carrier records search (report and
+          window) proving no call was created for the submission.
+          carrier_hangup_at must not be supplied. The attempt moves
+          to closed_unsubmitted.
+
+        On success under any basis the attempt leaves the states the
+        submission gate counts, and media attach refuses the terminal
+        states. Any bound ids stay on the attempt row, untouched, for
+        audit.
         """
         check_identifier(operator)
         check_identifier(evidence_ref)
-        if basis not in ("carrier_refused", "not_a_carrier_attempt"):
+        if basis not in ("carrier_refused", "not_a_carrier_attempt",
+                         "carrier_record_verified"):
             raise ValueError("unknown resolution basis")
         if not isinstance(attestation, str) or not attestation.strip():
             raise ValueError("an attestation is required")
         if len(attestation) > 4096:
             raise ValueError("attestation is oversized")
+        if basis != "carrier_record_verified" and carrier_hangup_at is not None:
+            raise ValueError(
+                "carrier_hangup_at is only valid with basis 'carrier_record_verified'")
         with self._tx() as conn:
             row = conn.execute(
                 "SELECT * FROM attempts WHERE attempt_id=?", (attempt_id,)).fetchone()
             if not row:
                 raise ValueError("unknown attempt")
-            if row["state"] not in ("submit_unknown", "initiated"):
-                raise ValueError("attempt is not in a resolvable state")
             existing = conn.execute(
                 "SELECT 1 FROM attempt_resolutions WHERE attempt_id=?",
                 (attempt_id,)).fetchone()
             if existing:
                 raise ValueError("attempt already has a recorded resolution")
-            if self._correlated_event_count(conn, row):
-                raise ValueError("stored webhook events exist for this attempt")
             bound = (row["control_id"], row["leg_id"], row["session_id"])
-            if basis == "carrier_refused":
-                if row["state"] != "submit_unknown" or any(bound):
+            new_hangup_at = None
+            if basis == "carrier_record_verified":
+                new_state, new_hangup_at = self._carrier_record_shape(
+                    conn, row, bound, carrier_hangup_at)
+            else:
+                if row["state"] not in ("submit_unknown", "initiated"):
+                    raise ValueError("attempt is not in a resolvable state")
+                if self._correlated_event_count(conn, row):
+                    raise ValueError("stored webhook events exist for this attempt")
+                if basis == "carrier_refused":
+                    if row["state"] != "submit_unknown" or any(bound):
+                        raise ValueError(
+                            "carrier_refused requires an unbound submit_unknown attempt")
+                elif any(bound) and not _ids_are_fabricated(bound):
                     raise ValueError(
-                        "carrier_refused requires an unbound submit_unknown attempt")
-            elif any(bound) and not _ids_are_fabricated(bound):
-                raise ValueError(
-                    "bound ids are carrier-shaped: a create response is on record")
+                        "bound ids are carrier-shaped: a create response is on record")
+                new_state = "closed_unsubmitted"
             created = self.clock()
             conn.execute(
                 "INSERT INTO attempt_resolutions(attempt_id,prior_state,basis,"
                 "operator,evidence_ref,attestation,created_at) VALUES(?,?,?,?,?,?,?)",
                 (attempt_id, row["state"], basis, operator, evidence_ref,
                  attestation, created))
-            conn.execute(
-                "UPDATE attempts SET state=? WHERE attempt_id=?",
-                ("closed_unsubmitted", attempt_id))
-            return {"attempt_id": attempt_id, "prior_state": row["state"],
-                    "state": "closed_unsubmitted", "basis": basis,
-                    "operator": operator, "evidence_ref": evidence_ref,
-                    "created_at": created}
+            if new_hangup_at is not None:
+                conn.execute(
+                    "UPDATE attempts SET state=?,hangup_at=? WHERE attempt_id=?",
+                    (new_state, new_hangup_at, attempt_id))
+            else:
+                conn.execute(
+                    "UPDATE attempts SET state=? WHERE attempt_id=?",
+                    (new_state, attempt_id))
+            receipt = {"attempt_id": attempt_id, "prior_state": row["state"],
+                       "state": new_state, "basis": basis,
+                       "operator": operator, "evidence_ref": evidence_ref,
+                       "created_at": created}
+            if new_hangup_at is not None:
+                receipt["hangup_at"] = new_hangup_at
+            return receipt
+
+    def _carrier_record_shape(self, conn, row, bound,
+                              carrier_hangup_at) -> tuple[str, float | None]:
+        """Fail-closed shape match for basis 'carrier_record_verified'.
+
+        Returns (new_state, hangup_at): ('hangup', carrier_hangup_at)
+        for shape A, ('closed_unsubmitted', None) for shape B. Raises
+        ValueError on any mismatch -- a state or binding that fits
+        neither shape is not resolvable on a carrier record.
+        """
+        if row["state"] == "answered":
+            # Shape A: a live call whose terminal event was never stored.
+            if not row["control_id"] or not row["control_id"].startswith("v3:"):
+                raise ValueError(
+                    "carrier_record_verified shape A requires a bound carrier control id")
+            events = self._correlated_events(conn, row)
+            if not events:
+                raise ValueError(
+                    "no stored signed events prove this call was live")
+            if any(event.get("event_type") == "call.hangup" for event in events):
+                raise ValueError(
+                    "a call.hangup event is stored for this attempt: process it instead")
+            if (not isinstance(carrier_hangup_at, (int, float))
+                    or isinstance(carrier_hangup_at, bool)
+                    or not math.isfinite(carrier_hangup_at)
+                    or carrier_hangup_at <= 0):
+                raise ValueError(
+                    "carrier_record_verified shape A requires the carrier-recorded"
+                    " hangup time")
+            return "hangup", float(carrier_hangup_at)
+        if row["state"] == "submit_unknown" and not any(bound):
+            # Shape B: a submission a records search proves never
+            # became a carrier call.
+            if carrier_hangup_at is not None:
+                raise ValueError(
+                    "carrier_hangup_at applies only to a live call closed on a"
+                    " carrier record")
+            if self._correlated_event_count(conn, row):
+                raise ValueError("stored webhook events exist for this attempt")
+            return "closed_unsubmitted", None
+        raise ValueError(
+            "attempt state does not match a carrier-record resolution shape")
 
     def get_attempt_resolution(self, attempt_id: str) -> dict | None:
         with self._tx() as conn:
