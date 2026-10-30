@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import sqlite3
 import time
 from contextlib import contextmanager
@@ -232,6 +233,14 @@ class TelnyxAdapter:
                 "SELECT * FROM attempts WHERE attempt_id=?", (attempt_id,)).fetchone()
             if not row or row["state"] != "prepared" or row["stop"]:
                 raise ValueError("no redial: reconcile the existing attempt")
+            active = conn.execute(
+                "SELECT COUNT(*) FROM attempts WHERE state IN "
+                "('submit_unknown','initiated','answered')").fetchone()[0]
+            limit = self.config.max_concurrent_calls
+            if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1:
+                raise ValueError('invalid concurrent-call limit')
+            if active >= limit:
+                raise ValueError('concurrent-call limit: reconcile active or unknown calls first')
             conn.execute(
                 "UPDATE attempts SET state=? WHERE attempt_id=?", ("submit_unknown", attempt_id))
             return {"method": "POST", "path": "/v2/calls",
@@ -325,11 +334,15 @@ class TelnyxAdapter:
                 raise ValueError("attempt is already registered or consumed")
             reservations = quota_reservations or []
             quota_totals = []
+            seen = set()
             for name, period, amount, limit in reservations:
                 check_identifier(name)
                 check_identifier(period)
-                if amount < 0 or limit < 0:
-                    raise ValueError("quota values must be nonnegative")
+                if (name, period) in seen:
+                    raise ValueError('duplicate quota reservation key')
+                seen.add((name, period))
+                if not all(math.isfinite(float(v)) and float(v) >= 0 for v in (amount, limit)):
+                    raise ValueError("quota values must be finite and nonnegative")
                 row = conn.execute(
                     "SELECT used FROM quota_ledger WHERE name=? AND period=?",
                     (name, period)).fetchone()
@@ -385,9 +398,12 @@ class TelnyxAdapter:
                     "SELECT used FROM quota_ledger WHERE name=? AND period=?",
                     (name, period)).fetchone()
                 used = float(row["used"]) if row else 0.0
-                settled = max(0.0, used - float(reserved) + float(actual.get(name, 0.0)))
-                if settled > float(limit):
-                    raise ValueError("actual quota usage exceeds configured limit")
+                observed = float(actual.get(name, 0.0))
+                if not math.isfinite(observed) or observed < 0:
+                    raise ValueError('actual quota usage must be finite and nonnegative')
+                settled = max(0.0, used - float(reserved) + observed)
+                # Settlement records reality even above the limit. Rejecting
+                # an overage here hides spend; subsequent reservations fail.
                 conn.execute(
                     "UPDATE quota_ledger SET used=? WHERE name=? AND period=?",
                     (settled, name, period))
@@ -421,7 +437,8 @@ class TelnyxAdapter:
         hangup = False
         with self._tx() as conn:
             rows = conn.execute(
-                "SELECT data_json FROM events WHERE processed=1").fetchall()
+                "SELECT data_json FROM events WHERE processed=1 "
+                "AND outcome IN ('applied','nonregressing_event_stored')").fetchall()
             for row in rows:
                 data = json.loads(row["data_json"])
                 payload = data.get("payload", {})
@@ -436,11 +453,15 @@ class TelnyxAdapter:
         return self.reserve_quotas([(name, period, amount, limit)])[0]
 
     def reserve_quotas(self, reservations: list[tuple[str, str, float, float]]) -> list[float]:
+        seen = set()
         for name, period, amount, limit in reservations:
             check_identifier(name)
             check_identifier(period)
-            if amount < 0 or limit < 0:
-                raise ValueError("quota values must be nonnegative")
+            if (name, period) in seen:
+                raise ValueError('duplicate quota reservation key')
+            seen.add((name, period))
+            if not all(math.isfinite(float(v)) and float(v) >= 0 for v in (amount, limit)):
+                raise ValueError("quota values must be finite and nonnegative")
         totals = []
         with self._tx() as conn:
             for name, period, amount, limit in reservations:

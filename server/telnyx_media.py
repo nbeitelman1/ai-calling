@@ -152,9 +152,13 @@ class MediaAttachGate:
             return False, "unknown_attempt"
         if attempt.get("state") in ("prepared", "cancelled_before_submit"):
             return False, "unclaimed_attempt"
+        if attempt.get("state") == "hangup" or attempt.get("stop"):
+            return False, "terminal_or_stopped_attempt"
         bound_control = attempt.get("control_id")
         if not bound_control:
             return False, "unbound_attempt"
+        if attempt.get("state") not in ("submit_unknown", "initiated", "answered"):
+            return False, "invalid_attempt_state"
         if bound_control != call_control_id:
             return False, "control_mismatch"
         try:

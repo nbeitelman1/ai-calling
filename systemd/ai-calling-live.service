@@ -11,6 +11,8 @@ User=root
 Group=root
 WorkingDirectory=/home/hatch/workspace/ai-calling/server
 EnvironmentFile=/home/hatch/workspace/ai-calling/.webhook-public-key
+# Host/model/quota settings; keep private and out of source control.
+EnvironmentFile=-/home/hatch/workspace/ai-calling/.runtime-config
 EnvironmentFile=/home/hatch/workspace/ai-calling/.internal-token
 EnvironmentFile=/home/hatch/workspace/ai-calling/.provider-credentials
 # Instance adaptation (Oct 29, 2026): this VM's egress proxy requires auth,

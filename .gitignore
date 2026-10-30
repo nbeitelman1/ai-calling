@@ -5,13 +5,24 @@
 .webhook-public-key
 .env
 *.env
+.runtime-config
+.candidate-venvs/
+.venv/
+.venvs/
 
 # Local environments, caches, runtime data
 .deploy-venv/
 __pycache__/
 *.pyc
 logs/
-nltk_data/
+# Curated English tokenizer data is required for offline service startup.
+nltk_data/*
+!nltk_data/tokenizers/
+nltk_data/tokenizers/*
+!nltk_data/tokenizers/punkt_tab/
+nltk_data/tokenizers/punkt_tab/*
+!nltk_data/tokenizers/punkt_tab/README
+!nltk_data/tokenizers/punkt_tab/english/
 
 # Backups, exports, scratch
 backup-pre-merge-2026-10-29/

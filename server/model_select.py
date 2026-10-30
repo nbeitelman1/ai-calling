@@ -179,9 +179,19 @@ def redact_persisted_text(text: str) -> str:
 
 
 def redact_record(record: dict) -> dict:
-    entry = dict(record)
-    entry["transcript"] = [
-        {**turn, "text": redact_persisted_text(turn.get("text", ""))}
-        for turn in record.get("transcript", [])
-    ]
+    """Redact nested diagnostics too; provider exceptions can contain secrets.
+
+    This is a pattern backstop, not a complete PII classifier. Production logs
+    still require access control, retention and approved collection practices.
+    """
+    def clean(value):
+        if isinstance(value, str):
+            return redact_persisted_text(value)
+        if isinstance(value, dict):
+            return {key: clean(item) for key, item in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [clean(item) for item in value]
+        return value
+    entry = clean(record)
+    entry.setdefault('transcript', [])
     return entry

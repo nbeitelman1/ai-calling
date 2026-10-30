@@ -42,7 +42,7 @@ def main() -> int:
     if os.environ.get("AI_CALLING_LOG_JSON", "1") == "1":
         from loguru import logger
         logger.remove()
-        logger.add(sys.stderr, serialize=True,
+        logger.add(sys.stderr, serialize=True, diagnose=False, backtrace=False,
                    level=os.environ.get("AI_CALLING_LOG_LEVEL", "INFO"))
     if not os.environ.get("TELNYX_WEBHOOK_PUBLIC_KEY", "").strip():
         print("Refusing to start: TELNYX_WEBHOOK_PUBLIC_KEY is not set.")
@@ -60,7 +60,7 @@ def main() -> int:
                               / "logs" / "webhook.db"))
     import uvicorn
     uvicorn.run("live_server:app", host="127.0.0.1", port=8001,
-                log_level="warning")
+                log_level="warning", ws_max_size=65536, ws_max_queue=16)
     return 0
 
 

@@ -12,8 +12,9 @@ import time
 import urllib.error
 import urllib.request
 import uuid
+from pathlib import Path
 
-sys.path.insert(0, "/home/hatch/workspace/ai-calling/server")
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "server"))
 from telnyx_adapter import AdapterConfig, TelnyxAdapter
 from telnyx_adapter.config import Approval
 from telnyx_media import streaming_start_request
@@ -22,7 +23,7 @@ CONNECTION_ID = "3081546725312169326"
 FROM = "+13214978649"
 TO = "+13213677796"
 HOST = os.environ.get("AI_CALLING_PUBLIC_HOST", "").strip()
-DB_PATH = "/home/hatch/workspace/ai-calling/logs/webhook.db"
+DB_PATH = os.environ.get("TELNYX_WEBHOOK_DB", "/home/hatch/workspace/ai-calling/logs/webhook.db")
 LOG_PATH = "/home/hatch/workspace/ai-calling/logs/test-call-2026-10-29-measure.jsonl"
 MAX_SECONDS = 600
 ANSWER_TIMEOUT_SECONDS = int(os.environ.get("AI_CALLING_ANSWER_TIMEOUT_SECONDS", "45"))
@@ -117,6 +118,14 @@ def main():
         return 2
     if not HOST or "/" in HOST:
         log("ABORT: set AI_CALLING_PUBLIC_HOST to the freshly verified host")
+        return 2
+    try:
+        status, readiness = http_json('GET', 'http://127.0.0.1:8001/readyz')
+        if status != 200 or readiness.get('ready') is not True:
+            log('ABORT: service is not ready; no dial attempted')
+            return 2
+    except Exception:
+        log('ABORT: readiness unavailable; no dial attempted')
         return 2
     for url in ("http://127.0.0.1:8001/healthz", f"https://{HOST}/healthz"):
         st, body = http_json("GET", url)

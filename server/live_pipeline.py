@@ -42,6 +42,7 @@ Hard rules (from call_job.py / server.py, not overridable by a job):
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import hashlib
 import os
@@ -100,7 +101,8 @@ class LiveCredentialRefs:
     gemini_api_key_ref: str = "GEMINI_API_KEY"
     elevenlabs_api_key_ref: str = "ELEVENLABS_API_KEY"
     telnyx_api_key_ref: str = "TELNYX_API_KEY"
-    elevenlabs_voice_id: str = "cgSgspJ2msm6clMCkdW9"  # Jessica (Nathan's pick Oct 29, 2026; Natasha id does not exist on this account)
+    elevenlabs_voice_id: str = field(default_factory=lambda: os.environ.get(
+        "ELEVENLABS_VOICE_ID", "cgSgspJ2msm6clMCkdW9").strip())  # Jessica (Nathan's pick Oct 29, 2026; Natasha id does not exist on this account)
 
 
 @dataclass
@@ -115,6 +117,21 @@ class LiveCallJob:
     pronunciation_hints: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self):
+        from telnyx_adapter.wire import check_e164
+        check_e164(self.to)
+        if isinstance(self.max_minutes, bool) or not isinstance(self.max_minutes, int) or not 1 <= self.max_minutes <= 60:
+            raise ValueError('max_minutes must be an integer in 1..60')
+        if not isinstance(self.test_call, bool):
+            raise ValueError('test_call must be boolean')
+        if not all(isinstance(v, str) and 0 < len(v) <= 4096 for v in (self.business, self.objective, self.opening)):
+            raise ValueError('business, objective and opening must be bounded nonempty text')
+        if (not isinstance(self.allowed_decisions, list) or len(self.allowed_decisions) > 32
+                or not all(isinstance(v, str) and len(v) <= 512 for v in self.allowed_decisions)):
+            raise ValueError('invalid allowed_decisions')
+        if (not isinstance(self.pronunciation_hints, dict) or len(self.pronunciation_hints) > 64
+                or not all(isinstance(k, str) and isinstance(v, str) and len(k) <= 128 and len(v) <= 128
+                           for k, v in self.pronunciation_hints.items())):
+            raise ValueError('invalid pronunciation_hints')
         validate_job_script(self.opening)
         if not self.allowed_decisions:
             self.allowed_decisions = ["ending the call"]
@@ -135,7 +152,8 @@ def build_system_prompt(job: LiveCallJob) -> str:
         "NEVER ask for, repeat, or act on: " + ", ".join(FORBIDDEN_TOPICS) + ".\n"
         "If any of those is requested, or if the caller asks for a human, "
         "asks if you are AI, or refuses to talk to an assistant, say "
-        "'Let me bring Nathan in — one moment.' and end your turn.\n"
+        "\"Nathan will need to take this over. I'll end the call now.\" and end your turn. "
+        "No live transfer is implemented; never promise to connect Nathan.\n"
         f"If asked directly whether you are a person or AI, answer exactly: {AI_IDENTITY_ANSWER}\n"
         "Style: short spoken sentences, natural pacing, feminine voice, "
         "warm, confident. Do not claim to be Nathan or any real person. "
@@ -328,6 +346,10 @@ class BrainLadder:
             return {"action": "continue"}
         self.transcript.append({"role": "user", "text": text})
         lowered = text.lower()
+        import re
+        if re.search(r"^(?:no[, ]+)?(?:please\s+)?(?:stop calling|do not call|don't call|do not contact|don't contact|remove me from (?:your|the) list|end (?:this|the) call|hang up)\b", lowered):
+            self.terminal_reason = "callee_opt_out"
+            return {"action": "end_call", "reason": self.terminal_reason}
         ivr_patterns = (
             "please press ", "to continue press ", "for sales press ",
             "main menu", "say billing", "say sales", "enter your extension",
@@ -425,6 +447,7 @@ class TranscriptTap(FrameProcessor):
         self._silence_policy = silence_policy
 
     async def process_frame(self, frame, direction):
+        await super().process_frame(frame, direction)
         if _PIPECAT_FRAMES and direction == FrameDirection.DOWNSTREAM:
             if self._side == "user" and isinstance(frame, TranscriptionFrame):
                 if not getattr(frame, "finalized", False):
@@ -439,8 +462,8 @@ class TranscriptTap(FrameProcessor):
                 if self._silence_policy:
                     self._silence_policy.on_speech()
                 action = self._ladder.on_user_text(frame.text)
-                await self.push_frame(frame, direction)
                 if action["action"] == "end_call":
+                    # Do not trigger a new inference after the callee ended it.
                     await self.push_frame(EndFrame(), direction)
                     return
                 if action["action"] == "switch_to_frontier":
@@ -449,6 +472,8 @@ class TranscriptTap(FrameProcessor):
                         LLMUpdateSettingsFrame(
                             delta=LLMSettings(model=action["model"])),
                         direction)
+                # Switch settings before a transcription can trigger inference.
+                await self.push_frame(frame, direction)
                 return
         await self.push_frame(frame, direction)
 
@@ -480,13 +505,20 @@ class ResponseGate(FrameProcessor):
         self._character_budget = character_budget
 
     async def process_frame(self, frame, direction):
+        await super().process_frame(frame, direction)
+        from pipecat.frames.frames import CancelFrame, InterruptionFrame
+        if isinstance(frame, (CancelFrame, InterruptionFrame, EndFrame)):
+            self._buffer = []
+            self._active = False
         if not _PIPECAT_FRAMES or direction != FrameDirection.DOWNSTREAM:
             await self.push_frame(frame, direction)
             return
         from pipecat.frames.frames import (
             LLMFullResponseEndFrame,
             LLMFullResponseStartFrame,
+            AggregatedTextFrame,
         )
+        from pipecat.utils.text.base_text_aggregator import AggregationType
         if isinstance(frame, LLMFullResponseStartFrame):
             self._active = True
             self._buffer = []
@@ -510,7 +542,10 @@ class ResponseGate(FrameProcessor):
                 await self.push_frame(EndFrame(), direction)
                 return
             if safe:
-                await self.push_frame(TextFrame(text=safe), direction)
+                # Already a complete, guarded response; do not re-tokenize it
+                # through NLTK or wait for sentence lookahead a second time.
+                await self.push_frame(AggregatedTextFrame(
+                    safe, AggregationType.SENTENCE, raw_text=safe), direction)
             await self.push_frame(frame, direction)
             return
         if self._active and isinstance(frame, TextFrame):
@@ -544,6 +579,7 @@ class InboundDebugTap(FrameProcessor):
         self._activity = activity
 
     async def process_frame(self, frame, direction):
+        await super().process_frame(frame, direction)
         if _PIPECAT_FRAMES and direction == FrameDirection.DOWNSTREAM:
             if self._mode == "frames" and isinstance(frame, InputAudioRawFrame):
                 self._count += 1
@@ -569,11 +605,15 @@ class BotActivityTap(FrameProcessor):
         self._activity = activity
 
     async def process_frame(self, frame, direction):
-        from pipecat.frames.frames import TTSStartedFrame, TTSStoppedFrame
-        if isinstance(frame, TTSStartedFrame):
-            self._activity.bot_started()
-        elif isinstance(frame, TTSStoppedFrame):
-            self._activity.bot_stopped()
+        await super().process_frame(frame, direction)
+        from pipecat.frames.frames import BotStartedSpeakingFrame, BotStoppedSpeakingFrame
+        # Transport playout state, not synthesis completion. This tap sits
+        # BEFORE transport.output(), so only the upstream broadcast counts.
+        if direction == FrameDirection.UPSTREAM:
+            if isinstance(frame, BotStartedSpeakingFrame):
+                self._activity.bot_started()
+            elif isinstance(frame, BotStoppedSpeakingFrame):
+                self._activity.bot_stopped()
         await self.push_frame(frame, direction)
 
 
@@ -588,6 +628,7 @@ class InputAudioRechunker(FrameProcessor):
         self._buffer = bytearray()
 
     async def process_frame(self, frame, direction):
+        await super().process_frame(frame, direction)
         if (direction == FrameDirection.DOWNSTREAM
                 and isinstance(frame, InputAudioRawFrame)):
             if frame.sample_rate != self.sample_rate or frame.num_channels != self.channels:
@@ -610,7 +651,7 @@ class CachedElevenLabsTTSService:
 
     @staticmethod
     def create(base_class, *, cache: FixedPhraseCache, fixed_phrases: set[str],
-               **kwargs):
+               character_budget: TTSCharacterBudget | None = None, **kwargs):
         from pipecat.services.websocket_service import _BoundedCloseConnection
 
         class _CloseHeaderTolerantConnection(_BoundedCloseConnection):
@@ -641,17 +682,9 @@ class CachedElevenLabsTTSService:
 
                 def process_response(response,
                                      _original=original_process_response):
-                    headers = response.headers
-                    tokens = []
-                    for value in headers.get_all("Connection"):
-                        tokens.extend(part.strip() for part in
-                                      value.split(",") if part.strip())
-                    if not any(part.lower() == "upgrade" for part in tokens):
-                        kept = [part for part in tokens
-                                if part.lower() != "close"]
-                        if headers.get_all("Connection"):
-                            del headers["Connection"]
-                        headers["Connection"] = ", ".join(kept + ["Upgrade"])
+                    from websocket_compat import normalize_close_upgrade
+                    if normalize_close_upgrade(response):
+                        logger.warning('applied explicitly enabled close-header proxy workaround')
                     return _original(response)
 
                 protocol.process_response = process_response
@@ -662,17 +695,37 @@ class CachedElevenLabsTTSService:
                 # own _BoundedCloseConnection; an explicit value here
                 # wins, routing this service's handshakes through the
                 # tolerant subclass above.
-                kwargs.setdefault("create_connection",
-                                  _CloseHeaderTolerantConnection)
+                if os.environ.get('AI_CALLING_ALLOW_CLOSE_HEADER_WORKAROUND') == '1':
+                    kwargs.setdefault("create_connection", _CloseHeaderTolerantConnection)
                 return await super()._websocket_connect(uri, **kwargs)
 
             async def run_tts(self, text, context_id):
                 cached = cache.load(text) if text in fixed_phrases else None
                 if cached is not None:
+                    # The pinned 1.8.0 generator contract requires a context
+                    # BEFORE yielding audio. Cached audio is synchronous;
+                    # on_turn_context_completed owns closure AFTER all text
+                    # has been queued. Closing here drops late context frames.
+                    from pipecat.frames.frames import (
+                        TTSStartedFrame,
+                        TTSStoppedFrame,
+                    )
+                    if not self.audio_context_available(context_id):
+                        await self.create_audio_context(context_id)
+                        yield TTSStartedFrame(context_id=context_id)
                     for offset in range(0, len(cached), 6400):
                         yield TTSAudioRawFrame(
                             cached[offset:offset + 6400], self.sample_rate, 1,
                             context_id=context_id)
+                    # No provider alignment arrives on a cache hit. Pipecat
+                    # 1.8's sequencer supplies the remaining text at context
+                    # completion; appending TTSTextFrame here duplicates it.
+                    yield TTSStoppedFrame(context_id=context_id)
+                    return
+                if character_budget is not None and not character_budget.reserve(text):
+                    from pipecat.frames.frames import ErrorFrame
+                    await self.push_frame(ErrorFrame(
+                        error='TTS character budget exhausted', fatal=True), FrameDirection.UPSTREAM)
                     return
                 captured = bytearray()
                 async for frame in super().run_tts(text, context_id):
@@ -725,6 +778,22 @@ class _CountingTelnyxSerializer(TelnyxFrameSerializer):
         self._sequence_gaps = 0
         self._duplicate_or_old = 0
         self._input_payload_bytes = 0
+        self._output_payload_bytes = 0
+        self._output_media_count = 0
+        self.output_audio_ready = asyncio.Event()
+
+    async def serialize(self, frame):
+        serialized = await super().serialize(frame)
+        if serialized:
+            message = json.loads(serialized)
+            if message.get('event') == 'media':
+                import base64
+                self._output_payload_bytes += len(base64.b64decode(message['media']['payload']))
+                self._output_media_count += 1
+                self.output_audio_ready.set()
+                if self._output_media_count == 1:
+                    logger.info('media-stage first_outbound_payload attempt={}', self._attempt_id)
+        return serialized
 
     async def deserialize(self, data):
         try:
@@ -909,13 +978,9 @@ def build_live_pipeline(websocket, call_data: dict, job: LiveCallJob,
     silence_policy = SilencePolicy()
     character_budget = TTSCharacterBudget(
         int(os.environ.get("AI_CALLING_TTS_CHAR_LIMIT", "4000")))
-    tts_model_pool = [
-        model.strip() for model in
-        os.environ.get("ELEVENLABS_TTS_MODELS", "eleven_flash_v2_5").split(",")
-        if model.strip()
-    ]
-    tts_model = tts_model_pool[0] if tts_model_pool else "eleven_flash_v2_5"
-    tts_sample_rate = int(os.environ.get("ELEVENLABS_SAMPLE_RATE", "16000"))
+    from provider_config import tts_configuration
+    tts_config = tts_configuration()
+    tts_model, tts_sample_rate = tts_config['model'], tts_config['sample_rate']
     phrase_cache = FixedPhraseCache(
         os.environ.get(
             "AI_CALLING_PHRASE_CACHE",
@@ -927,7 +992,7 @@ def build_live_pipeline(websocket, call_data: dict, job: LiveCallJob,
         job.opening,
         "Are you still there?",
         "I haven't heard anything, so I'll end the call now. Goodbye.",
-        "Let me bring Nathan in — one moment.",
+        "Nathan will need to take this over. I'll end the call now.",
         "I can't share or repeat that kind of information on a call.",
     }
     with _clean_proxy_env():
@@ -943,6 +1008,11 @@ def build_live_pipeline(websocket, call_data: dict, job: LiveCallJob,
             ElevenLabsTTSService,
             cache=phrase_cache,
             fixed_phrases=fixed_phrases,
+            character_budget=character_budget,
+            # Flush streaming resampler latency before ending an utterance.
+            # This uses Pipecat's supported pre-stop silence insertion.
+            push_silence_after_stop=True,
+            silence_time_s=0.2,
             api_key=_resolve_ref(refs.elevenlabs_api_key_ref),
             sample_rate=tts_sample_rate,
             settings=ElevenLabsTTSService.Settings(
@@ -971,20 +1041,26 @@ def build_live_pipeline(websocket, call_data: dict, job: LiveCallJob,
         TranscriptTap(ladder, "user", silence_policy),
         aggregators.user(),
         llm,
-        aggregators.assistant(),
-        ResponseGate(ladder, character_budget),
+        ResponseGate(ladder),  # Monetary/provider characters are reserved at run_tts.
         tts,
         BotActivityTap(activity),
         transport.output(),
+        # Capture actual TTS text after sanitization and playout, not raw LLM output.
+        aggregators.assistant(),
     ])
     task = PipelineWorker(
         pipeline,
-        params=PipelineParams(enable_metrics=True),
+        params=PipelineParams(enable_metrics=True, enable_usage_metrics=True,
+                              audio_in_sample_rate=16000,
+                              audio_out_sample_rate=tts_sample_rate),
+        enable_rtvi=False,
         idle_timeout_secs=None,
     )
     return task, ladder, {"stt": stt, "llm": llm, "tts": tts,
+                          "context": context,
                           "serializer": serializer,
                           "activity": activity,
+                          "silence_policy": silence_policy,
                           "character_budget": character_budget,
                           "phrase_cache": phrase_cache,
                           "call_control_id": call_control_id,
@@ -1074,15 +1150,16 @@ async def _speak_and_wait(tts, text_frame, activity: CallActivity,
 
     initial_cycles = activity.bot_cycles
     cached = cache.load(text)
+    sample_rate = cache.sample_rate
     expected = (len(cached) / (sample_rate * 2)) if cached else max(1.0, len(text) / 15)
     await tts.queue_frame(text_frame)
     deadline = time.monotonic() + expected + 5.0
     while time.monotonic() < deadline:
         if activity.bot_cycles > initial_cycles:
-            # TTS completion means frames were generated, not that Telnyx
-            # finished real-time playout. Drain the known PCM duration before
-            # issuing carrier hangup.
-            await asyncio.sleep(min(expected, 15.0) + 0.25)
+            # Local transport completion is not a carrier playback receipt.
+            # Conservative duration fallback; a future mark/clear-aware ack
+            # tracker should replace this estimate after controlled live tests.
+            await asyncio.sleep(expected + 0.25)
             return
         await asyncio.sleep(0.05)
     raise TimeoutError("terminal phrase did not finish playing")
@@ -1138,7 +1215,8 @@ async def _hangup_via_adapter(adapter, attempt_id: str, api_key: str,
     endpoint = "https://api.telnyx.com" + command["path"]
     headers = {"Content-Type": "application/json",
                "Authorization": f"Bearer {api_key}"}
-    async with aiohttp.ClientSession(trust_env=True) as session:
+    timeout = aiohttp.ClientTimeout(total=8, connect=3, sock_read=5)
+    async with aiohttp.ClientSession(trust_env=True, timeout=timeout) as session:
         async with session.post(endpoint, json=command["json"],
                                 headers=headers) as response:
             if response.status != 200:
@@ -1184,10 +1262,15 @@ async def handle_media_websocket(websocket, media_token: str, job: LiveCallJob,
 
     started = time.time()
     if models is None:
-        models = resolve_models_from_env()
+        from provider_config import load_preflight_receipt
+        models = load_preflight_receipt()['models']
     if ledger is None:
         ledger = CostLedger(test_call=job.test_call)
-    transport_type, call_data = await parse_telephony_websocket(websocket)
+    import asyncio
+    from runtime_safety import timeout_setting
+    transport_type, call_data = await asyncio.wait_for(
+        parse_telephony_websocket(websocket),
+        timeout=timeout_setting("AI_CALLING_HANDSHAKE_TIMEOUT_SECONDS", 5))
     if transport_type != "telnyx":
         await websocket.close(code=1011, reason="not a Telnyx media stream")
         return {"outcome": "rejected", "reason": f"transport_{transport_type}"}
@@ -1208,7 +1291,7 @@ async def handle_media_websocket(websocket, media_token: str, job: LiveCallJob,
         task, ladder, services = build_live_pipeline(
             websocket, call_data, job, refs, models, adapter, media_token)
     except Exception as exc:
-        outcome = f"error:{type(exc).__name__}:{exc}"
+        outcome = f"error:{type(exc).__name__}"
         try:
             hangup_acknowledged = await _hangup_via_adapter(
                 adapter, media_token,
@@ -1255,36 +1338,69 @@ async def handle_media_websocket(websocket, media_token: str, job: LiveCallJob,
     # Confirm on the first live run that the line is the first audio
     # the caller hears — it is test-list success criterion #1.
     import asyncio
-    from pipecat.frames.frames import AggregatedTextFrame as _AggText
-    from pipecat.utils.text.base_text_aggregator import AggregationType
-    runner = WorkerRunner(handle_sigint=False, handle_sigterm=False)
-    await runner.add_workers(task)
-    runner_task = asyncio.create_task(runner.run())
-    watcher_task = asyncio.create_task(
-        _wait_for_disconnect(websocket, adapter, media_token))
-    limit_task = asyncio.create_task(_wait_for_call_limit(job.max_minutes))
-    frontier_task = asyncio.create_task(_wait_for_frontier_limit(ladder))
-    terminal_task = asyncio.create_task(_wait_for_terminal_reason(ladder))
-    cost_task = asyncio.create_task(
-        _wait_for_cost_gate(ladder, ledger, started))
-    async def reprompt():
-        text = "Are you still there?"
-        await _speak_and_wait(
-            services["tts"],
-            _AggText(text, AggregationType.SENTENCE, raw_text=text),
-            services["activity"], services["phrase_cache"], text)
-
-    silence_task = asyncio.create_task(_wait_for_silence(
-        services["activity"], silence_policy,
-        float(os.environ.get("AI_CALLING_SILENCE_SECONDS", "12")), reprompt))
+    from pipecat.frames.frames import TTSSpeakFrame
+    from runtime_safety import (
+        cancel_tasks_bounded, timeout_setting, wait_pipeline_started,
+    )
     outcome = "completed"
     end_time = None
     cancelled = False
     hangup_acknowledged = False
+    cleanup_pending = 0
+    background_tasks = []
+    pipeline_started = asyncio.Event()
+    runner_task = watcher_task = limit_task = frontier_task = None
+    terminal_task = cost_task = silence_task = None
+
+    def spawn(coro, name):
+        owned = asyncio.create_task(coro, name=f"media:{media_token}:{name}")
+        background_tasks.append(owned)
+        return owned
+
+    async def reprompt():
+        text = "Are you still there?"
+        await _speak_and_wait(
+            services["tts"], TTSSpeakFrame(text),
+            services["activity"], services["phrase_cache"], text)
+
     try:
-        await services["tts"].queue_frame(
-            _AggText(job.opening, AggregationType.SENTENCE,
-                     raw_text=job.opening))
+        # All task creation and startup waits are inside the cleanup boundary.
+        start_timeout = timeout_setting("AI_CALLING_START_TIMEOUT_SECONDS", 15)
+        silence_seconds = timeout_setting("AI_CALLING_SILENCE_SECONDS", 12)
+
+        @task.event_handler("on_pipeline_started")
+        async def on_started(_worker, _frame):
+            pipeline_started.set()
+
+        @task.event_handler("on_pipeline_error")
+        async def on_error(_worker, frame):
+            if getattr(frame, 'fatal', False):
+                ladder.terminal_reason = 'pipeline_error'
+
+        runner = WorkerRunner(handle_sigint=False, handle_sigterm=False)
+        await runner.add_workers(task)
+        runner_task = spawn(runner.run(), "runner")
+        watcher_task = spawn(_wait_for_disconnect(websocket, adapter, media_token), "disconnect")
+        limit_task = spawn(_wait_for_call_limit(job.max_minutes), "duration")
+        frontier_task = spawn(_wait_for_frontier_limit(ladder), "frontier")
+        terminal_task = spawn(_wait_for_terminal_reason(ladder), "terminal")
+        cost_task = spawn(_wait_for_cost_gate(ladder, ledger, started), "cost")
+        await wait_pipeline_started(pipeline_started, runner_task, watcher_task,
+                                    timeout=start_timeout)
+        logger.info("media-stage pipeline_started attempt={}", media_token)
+        # Native standalone speech owns context creation AND turn completion.
+        # A raw AggregatedTextFrame alone has no corresponding turn-end signal.
+        await services["tts"].queue_frame(TTSSpeakFrame(job.opening))
+        logger.info("media-stage disclosure_queued attempt={}", media_token)
+        try:
+            await wait_pipeline_started(
+                services['serializer'].output_audio_ready, runner_task, watcher_task,
+                timeout=timeout_setting('AI_CALLING_FIRST_AUDIO_TIMEOUT_SECONDS', 8))
+        except TimeoutError as exc:
+            raise TimeoutError('no outbound audio serialized before deadline') from exc
+        silence_task = spawn(_wait_for_silence(
+            services["activity"], services["silence_policy"],
+            silence_seconds, reprompt), "silence")
         done, _pending = await asyncio.wait(
             {runner_task, watcher_task, limit_task, frontier_task, terminal_task,
              cost_task, silence_task},
@@ -1296,21 +1412,14 @@ async def handle_media_websocket(websocket, media_token: str, job: LiveCallJob,
             # appear ~5 minutes later at idle-timeout teardown, priced
             # on pipeline lifetime instead of the call. Stop the
             # pipeline now and record promptly.
-            try:
-                watcher_task.result()
-            except Exception:
-                pass
-            outcome = "hangup"
+            disconnect_reason = watcher_task.result()
+            outcome = "hangup" if disconnect_reason == "adapter_hangup" else "media_disconnected"
             end_time = time.time()
-            runner_task.cancel()
-            try:
-                await asyncio.wait_for(runner_task, timeout=5.0)
-            except (asyncio.CancelledError, Exception):
-                # Awaiting a cancelled task raises CancelledError, which
-                # on this Python does NOT inherit from Exception, so it
-                # needs naming explicitly; any outcome here just means
-                # the runner is stopped enough to record.
-                pass
+            if disconnect_reason != "adapter_hangup":
+                # A media socket closing is NOT proof the billable call ended.
+                hangup_acknowledged = await _hangup_via_adapter(
+                    adapter, media_token, _resolve_ref(refs.telnyx_api_key_ref), outcome)
+            await runner.cancel(outcome)
         elif limit_task in done:
             hangup_acknowledged = await _finish_and_hangup(
                 task, runner_task, adapter, media_token,
@@ -1318,10 +1427,10 @@ async def handle_media_websocket(websocket, media_token: str, job: LiveCallJob,
             outcome = "max_minutes"
             end_time = time.time()
         elif frontier_task in done:
-            text = "Let me bring Nathan in — one moment."
+            frontier_task.result()
+            text = "Nathan will need to take this over. I'll end the call now."
             await _speak_and_wait(
-                services["tts"],
-                _AggText(text, AggregationType.SENTENCE, raw_text=text),
+                services["tts"], TTSSpeakFrame(text),
                 services["activity"], services["phrase_cache"], text)
             hangup_acknowledged = await _finish_and_hangup(
                 task, runner_task, adapter, media_token,
@@ -1342,10 +1451,10 @@ async def handle_media_websocket(websocket, media_token: str, job: LiveCallJob,
             outcome = gate
             end_time = time.time()
         elif silence_task in done:
+            silence_task.result()
             text = "I haven't heard anything, so I'll end the call now. Goodbye."
             await _speak_and_wait(
-                services["tts"],
-                _AggText(text, AggregationType.SENTENCE, raw_text=text),
+                services["tts"], TTSSpeakFrame(text),
                 services["activity"], services["phrase_cache"], text)
             hangup_acknowledged = await _finish_and_hangup(
                 task, runner_task, adapter, media_token,
@@ -1360,7 +1469,7 @@ async def handle_media_websocket(websocket, media_token: str, job: LiveCallJob,
                     _resolve_ref(refs.telnyx_api_key_ref), outcome)
             elif runner_task.exception() is not None:
                 exc = runner_task.exception()
-                outcome = f"error:{type(exc).__name__}:{exc}"
+                outcome = f"error:{type(exc).__name__}"
                 hangup_acknowledged = await _hangup_via_adapter(
                     adapter, media_token,
                     _resolve_ref(refs.telnyx_api_key_ref), outcome)
@@ -1386,7 +1495,7 @@ async def handle_media_websocket(websocket, media_token: str, job: LiveCallJob,
         except Exception:
             hangup_acknowledged = False
     except Exception as exc:  # noqa: BLE001 - record, don't swallow silently
-        outcome = f"error:{type(exc).__name__}:{exc}"
+        outcome = f"error:{type(exc).__name__}"
         end_time = time.time()
         try:
             hangup_acknowledged = await _hangup_via_adapter(
@@ -1395,24 +1504,16 @@ async def handle_media_websocket(websocket, media_token: str, job: LiveCallJob,
         except Exception:
             hangup_acknowledged = False
     finally:
-        for pending_task in (watcher_task, limit_task, frontier_task,
-                             terminal_task, cost_task, silence_task, runner_task):
-            if not pending_task.done():
-                pending_task.cancel()
-        # Settle briefly; never let a hung pipeline delay the record.
-        # Shielded so a pending outer cancellation still lets the
-        # synchronous record write below run; a CancelledError here
-        # means the outer task was cancelled mid-settle, so mark it
-        # and re-raise after the record is written.
         try:
-            await asyncio.shield(asyncio.wait_for(
-                asyncio.gather(runner_task, watcher_task, limit_task, frontier_task,
-                               terminal_task, cost_task, silence_task,
-                               return_exceptions=True),
-                timeout=5.0))
+            cleanup_pending = await cancel_tasks_bounded(background_tasks, timeout=3.0)
         except asyncio.CancelledError:
             cancelled = True
+            cleanup_pending = sum(not t.done() for t in background_tasks)
         except Exception:
+            cleanup_pending = sum(not t.done() for t in background_tasks)
+        try:
+            await asyncio.wait_for(websocket.close(), timeout=1.0)
+        except (asyncio.CancelledError, Exception):
             pass
         if end_time is None:
             end_time = time.time()
@@ -1423,8 +1524,7 @@ async def handle_media_websocket(websocket, media_token: str, job: LiveCallJob,
         # commands), so watcher time is the available call-end timing.
         minutes = max(0.0, (end_time - started) / 60.0)
         cost = CallCost(minutes=minutes, stt_minutes=minutes,
-                        tts_chars=sum(len(t["text"]) for t in ladder.transcript
-                                    if t["role"] == "assistant"))
+                        tts_chars=services['character_budget'].used)
         try:
             hangup_acknowledged = bool(
                 hangup_acknowledged
@@ -1453,6 +1553,9 @@ async def handle_media_websocket(websocket, media_token: str, job: LiveCallJob,
             "ladder_stage": ladder.stage(),
             "loop_in_reason": ladder.loop_in_reason,
             "transcript": ladder.transcript,
+            "transcript_scope": "user_transcripts_and_planned_guarded_replies_not_playback_confirmation",
+            "billing_reconciled": False,
+            "cost_scope": "partial_client_estimate_not_provider_invoice",
             "minutes": round(minutes, 3),
             "estimated_cost_cents": round(cost.total_cents(), 2),
             "estimated_cost_breakdown_cents": {
@@ -1461,9 +1564,14 @@ async def handle_media_websocket(websocket, media_token: str, job: LiveCallJob,
             },
             "cost_gate": ledger.project(cost),
             "hangup_acknowledged": hangup_acknowledged,
-            "hangup_required": outcome.startswith("error") and not hangup_acknowledged,
+            "hangup_required": not (hangup_acknowledged or carrier_reconciliation.get("hangup_event")),
+            "pipeline_started": pipeline_started.is_set(),
+            "cleanup_pending_tasks": cleanup_pending,
             "tts_characters": services["character_budget"].used,
             "media_payload_bytes": services["serializer"]._input_payload_bytes,
+            "outbound_payload_bytes": services["serializer"]._output_payload_bytes,
+            "outbound_media_frames": services["serializer"]._output_media_count,
+            "audio_evidence_scope": "serialized_locally_not_carrier_playback",
             "media_sequence_gaps": services["serializer"]._sequence_gaps,
             "media_duplicate_or_old": services["serializer"]._duplicate_or_old,
             "carrier_reconciliation": carrier_reconciliation,

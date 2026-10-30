@@ -18,15 +18,15 @@ PHRASES = {
     DISCLOSURE_OPENING,
     "Are you still there?",
     "I haven't heard anything, so I'll end the call now. Goodbye.",
-    "Let me bring Nathan in — one moment.",
+    "Nathan will need to take this over. I'll end the call now.",
     REFUSAL_LINE,
 }
 
 
 async def main():
-    voice = os.environ.get("ELEVENLABS_VOICE_ID", "cgSgspJ2msm6clMCkdW9")
-    model = os.environ.get("ELEVENLABS_TTS_MODELS", "eleven_flash_v2_5").split(",")[0]
-    rate = int(os.environ.get("ELEVENLABS_SAMPLE_RATE", "16000"))
+    from provider_config import tts_configuration
+    tts = tts_configuration()
+    voice, model, rate = tts['voice'], tts['model'], tts['sample_rate']
     cache = FixedPhraseCache(
         os.environ.get("AI_CALLING_PHRASE_CACHE",
                        str(Path(__file__).resolve().parent.parent / "logs" /

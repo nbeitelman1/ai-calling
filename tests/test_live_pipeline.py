@@ -54,7 +54,7 @@ ROUTE = ("3081546725312169326", "+13214978649", "+13213677796")
 class FakeAdapter:
     """Minimal stand-in for TelnyxAdapter.get_attempt()."""
 
-    def __init__(self, state="submitted", control_id=CONTROL_ID, route=ROUTE):
+    def __init__(self, state="initiated", control_id=CONTROL_ID, route=ROUTE):
         self._row = {
             "attempt_id": ATTEMPT_ID,
             "state": state,
@@ -621,17 +621,17 @@ class TestResponseGate(unittest.IsolatedAsyncioTestCase):
         return pushed
 
     async def test_fragments_released_as_one_response(self):
+        from pipecat.frames.frames import AggregatedTextFrame
         ladder = BrainLadder(frontier_model="f")
         pushed = await self._drive(ladder, ["Hel", "lo there."])
-        texts = [f.text for f in pushed
-                 if f.__class__.__name__ == "TextFrame"]
+        texts = [f.text for f in pushed if isinstance(f, AggregatedTextFrame)]
         self.assertEqual(texts, ["Hello there."])
 
     async def test_ssn_response_replaced_with_refusal(self):
+        from pipecat.frames.frames import AggregatedTextFrame
         ladder = BrainLadder(frontier_model="f")
         pushed = await self._drive(ladder, ["Your number is 123-45-6789."])
-        texts = [f.text for f in pushed
-                 if f.__class__.__name__ == "TextFrame"]
+        texts = [f.text for f in pushed if isinstance(f, AggregatedTextFrame)]
         self.assertEqual(texts, ["I can't share or repeat that kind of information on a call."])
 
     async def test_third_frontier_reply_defers_loop_in_playback_to_outer_watcher(self):
@@ -766,7 +766,10 @@ class TestRuntimeBounds(unittest.IsolatedAsyncioTestCase):
         with patch("aiohttp.ClientSession", return_value=session) as factory:
             self.assertTrue(await _hangup_via_adapter(
                 adapter, ATTEMPT_ID, "dummy", "test"))
-        factory.assert_called_once_with(trust_env=True)
+        factory.assert_called_once()
+        self.assertTrue(factory.call_args.kwargs['trust_env'])
+        self.assertEqual(factory.call_args.kwargs['timeout'].total, 8)
+        self.assertEqual(factory.call_args.kwargs['timeout'].connect, 3)
         self.assertTrue(adapter.acknowledged)
 
     async def test_serializer_has_no_direct_hangup_fallback(self):

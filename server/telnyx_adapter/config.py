@@ -36,6 +36,7 @@ class Approval:
 @dataclass
 class AdapterConfig:
     live_enabled: bool = False
+    max_concurrent_calls: int = 1
     # Credential references only -- never values.
     api_credential_ref: str | None = None
     webhook_public_key_ref: str | None = None

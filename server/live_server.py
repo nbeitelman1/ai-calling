@@ -41,6 +41,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
+from loguru import logger
 
 from telnyx_adapter import AdapterConfig, TelnyxAdapter
 from telnyx_webhook import WEBHOOK_PATHS, adapter_event_data
@@ -169,26 +170,28 @@ def readiness_status() -> dict:
                 failures.append(quota.lower())
         except ValueError:
             failures.append(quota.lower())
-    receipt = Path(os.environ.get(
-        "AI_CALLING_PREFLIGHT_RECEIPT", str(LOG_DIR / "provider-preflight.json")))
     try:
-        data = json.loads(receipt.read_text(encoding="utf-8"))
-        if not data.get("ready") or time.time() - float(data["checked_at"]) > 3600:
-            failures.append("provider_preflight")
+        from provider_config import load_preflight_receipt
+        load_preflight_receipt()
     except Exception:
         failures.append("provider_preflight")
     try:
+        import nltk.data
+        nltk.data.find('tokenizers/punkt_tab/english/')
+    except (LookupError, ImportError):
+        failures.append('nltk_punkt_tab')
+    try:
         from live_pipeline import DISCLOSURE_OPENING, FixedPhraseCache
         from model_select import REFUSAL_LINE
-        voice = os.environ.get("ELEVENLABS_VOICE_ID", "cgSgspJ2msm6clMCkdW9")
-        model = os.environ.get("ELEVENLABS_TTS_MODELS", "eleven_flash_v2_5").split(",")[0]
-        rate = int(os.environ.get("ELEVENLABS_SAMPLE_RATE", "16000"))
+        from provider_config import tts_configuration
+        tts = tts_configuration()
+        voice, model, rate = tts['voice'], tts['model'], tts['sample_rate']
         cache = FixedPhraseCache(
             os.environ.get("AI_CALLING_PHRASE_CACHE", str(LOG_DIR / "phrase-cache")),
             namespace=f"{voice}/{model}/pcm_{rate}", sample_rate=rate)
         phrases = (DISCLOSURE_OPENING, "Are you still there?",
                    "I haven't heard anything, so I'll end the call now. Goodbye.",
-                   "Let me bring Nathan in — one moment.", REFUSAL_LINE)
+                   "Nathan will need to take this over. I'll end the call now.", REFUSAL_LINE)
         if any(cache.load(phrase) is None for phrase in phrases):
             failures.append("phrase_cache")
     except Exception:
@@ -238,7 +241,8 @@ async def register_media_job_http(request: Request):
     if not token or not hmac.compare_digest(supplied, token):
         return JSONResponse({"detail": "not found"}, status_code=404)
     try:
-        body = json.loads(await _read_limited(request))
+        from telnyx_adapter.wire import parse_json_bytes
+        body = parse_json_bytes(await _read_limited(request))
     except Exception:
         return JSONResponse({"detail": "invalid JSON"}, status_code=400)
     if not isinstance(body, dict):
@@ -283,12 +287,13 @@ async def register_media_job_http(request: Request):
 def _ingest(request: Request, raw: bytes):
     result = adapter.ingest_webhook(raw, request.headers)
     outcome = None
-    if not result.get("duplicate"):
-        try:
-            data = json.loads(adapter_event_data(adapter, raw))
-            outcome = adapter.process_event(data["id"])
-        except Exception:
-            outcome = "processing_deferred_operator_review"
+    # Processing is idempotent. A duplicate delivery must retry a stored but
+    # unprocessed event rather than leave it stranded after an earlier error.
+    try:
+        data = json.loads(adapter_event_data(adapter, raw))
+        outcome = adapter.process_event(data["id"])
+    except Exception:
+        outcome = "processing_deferred_operator_review"
     return {"accepted": True,
             "duplicate": result.get("duplicate", False),
             "outcome": outcome}
@@ -316,6 +321,17 @@ async def webhook_failover(request: Request):
 
 @app.websocket("/telnyx/media/{attempt_id}")
 async def media_socket(websocket: WebSocket, attempt_id: str):
+    from media_auth import verify_media_upgrade
+    try:
+        verify_media_upgrade(
+            websocket.headers, PUBLIC_KEY,
+            os.environ.get("AI_CALLING_PUBLIC_HOST", ""), attempt_id,
+            query=websocket.scope.get("query_string", b""))
+    except (ValueError, TypeError):
+        # Reject before accept/claim/provider work. Route IDs are correlation,
+        # not authentication. There is deliberately no unsigned debug bypass.
+        await websocket.close(code=1008, reason="media authentication failed")
+        return
     await websocket.accept()
     entry = peek_media_job(attempt_id)
     if entry is None:
@@ -327,10 +343,29 @@ async def media_socket(websocket: WebSocket, attempt_id: str):
         await handle_media_websocket(
             websocket, attempt_id, job, refs, adapter,
             expected_route, log_path)
-    except WebSocketDisconnect:
-        pass
-    except Exception:
+    except Exception as exc:
+        # Signature and durable registration already passed. A pre-build
+        # exception (bad config / missing start frame) must not strand a call.
+        from live_pipeline import _hangup_via_adapter, _resolve_ref
+        from model_select import CostLedger
+        reason = f"handler_error:{type(exc).__name__}"
+        logger.error("media handler failed attempt={} type={}", attempt_id, type(exc).__name__)
+        acknowledged = False
+        try:
+            acknowledged = await _hangup_via_adapter(
+                adapter, attempt_id, _resolve_ref(refs.telnyx_api_key_ref), reason)
+        except Exception:
+            logger.error("media handler emergency hangup failed attempt={}", attempt_id)
+        try:
+            CostLedger(test_call=job.test_call).record(log_path, {
+                "attempt_id": attempt_id, "outcome": reason,
+                "hangup_acknowledged": acknowledged,
+                "hangup_required": not acknowledged, "transcript": []})
+        except Exception:
+            logger.error("media handler emergency record failed attempt={}", attempt_id)
         try:
             await websocket.close(code=1011, reason="media handler error")
         except Exception:
             pass
+    finally:
+        JOB_REGISTRY.pop(attempt_id, None)
