@@ -107,6 +107,68 @@ stress test.
 - Reference pack: **57/57**; mutations **3/3 caught**; manifest
   **verified**.
 
+## Addendum — intelligence pass (Oct 30, 2026, evening)
+
+Nathan directed the full build-out ("Go ahead full way") from his
+persona/memory vision: a Carnegie-derived persona, a temporal
+memory of the people the assistant calls, and a fast System-One-
+style controller between them. Design + the hosted-Jev decision
+brief: `docs/PERSONA_MEMORY_SPEC.md`. Shipped on
+`review/ai-calling-candidate` (f309d04..ec4271e), service restarted
+20:49 UTC onto the new code, /readyz green local + public,
+0 unresolved attempts.
+
+- **Memory plane** (`server/profile_store.py`): SQLite temporal
+  store — entities + aliases (phone numbers resolve to entities),
+  facts with valid_from/valid_to + superseded_by (history kept,
+  slices show only current values), episodes with provenance,
+  commitments with lifecycle. Live DB seeded at
+  `~/workspace/ai-calling/logs/profile.db` (Nathan's durable facts,
+  the verbatim standing lines, both Oct 30 test-call episodes;
+  provenance "seeded from Nathan's records Oct 30 2026").
+- **Control plane** (`server/call_controller.py`): frozen pre-call
+  brief (persona + profile slice + playbook + end conditions),
+  pure-rule in-call routing, deterministic post-call extraction
+  (facts / preferences / commitments both directions /
+  counterparty notes) written back with episode provenance and
+  surfaced in the call record as `memory_writeback`. Measured on
+  the real 30-turn transcript: brief ~0.14ms, per-turn routing
+  ~0.04ms mean, extraction ~0.16ms — no dead-air risk. The typing
+  seat sits behind `ControllerDecider`; `HostedJevDecider` is an
+  inert stub (see the spec §8 recommendation: local now; hosted
+  Jev only later, only for post-call typing, only with Nathan's
+  own account + key + explicit data-egress approval).
+- **Persona + conversation** (`server/persona.py`,
+  `conversation_state.py`, pipeline): the prompt bug that made an
+  identity question a hand-back trigger is fixed — identity is
+  answered honestly and the call continues. Repetition guard:
+  a re-asked question is substituted with the playbook's next
+  question; a further repeat speaks the wrap-up line and ends the
+  call (outcome `repetition_guard`). Terminal discipline: once the
+  hand-back line is spoken, no new inference starts and the
+  handler lets the line finish before hangup.
+- **Playbooks** (`playbooks/*.json`): appointment_scheduling
+  (an office requiring Nathan's DOB is a hand-back trigger),
+  information_gathering, follow_up_status. `place_call.py` gained
+  `--playbook` and `--counterparty`; `--dry-run` prints the brief
+  preview (verified live: Atlantic Psychiatric -> inferred
+  appointment_scheduling + 411-char profile slice).
+- **Eval** (`tests/test_intelligence_eval.py`): scripted synthetic
+  calls prove repetition progression + clean wrap-up, hand-back
+  exactly once with no post-terminal inference, and memory
+  continuity (call 2's brief contains call 1's written-back fact
+  and open commitment).
+- **Test state after the pass**: application suite **243/243**
+  (219 + 24 new), reference pack **57/57**, mutations **3/3
+  caught**, manifest **verified**.
+- **Known limits**: the rule-based guard catches close rephrasings
+  (content-token similarity) — replaying the real Oct 30
+  transcript it groups the duplicated ask and would substitute the
+  next related one, but looser semantic rephrasings pass; the
+  typer's patterns are deliberately conservative (a wrong memory
+  outlives the call). Both are the seats a hosted typed model
+  would strengthen, per the spec's Jev brief.
+
 ## Known remaining work (for later improvement rounds)
 
 - Reservations still linger for a job whose bill is never

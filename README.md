@@ -11,6 +11,16 @@ identity ("So what's your name?" → the honest-AI answer below), and
 the call closed cleanly with a signed hangup and a written record.
 See `PROJECT_STATE_2026-10-30.md` for the day's full evidence trail.
 
+**Intelligence pass (Oct 30, 2026, evening):** a Carnegie-derived
+persona core, a temporal profile memory (facts with validity
+windows, episodes, commitments — `docs/PERSONA_MEMORY_SPEC.md`),
+a fast rule-based control plane that freezes a per-call brief,
+guards against repeated questions, enforces one-terminal-line
+discipline, and writes each call's facts and commitments back to
+memory, plus data-file playbooks (appointment scheduling,
+information gathering, follow-up) selectable via
+`place_call.py --playbook/--counterparty`. Suite: 243/243 offline.
+
 ## Architecture
 
 ```
