@@ -1,0 +1,13 @@
+{
+  "scope": "SYNTHETIC_KEY_NOT_TELNYX_ACCOUNT_KEY",
+  "public_key_base64": "A6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=",
+  "fixed_test_clock": 1793275200,
+  "body_utf8": "{\"data\":{\"record_type\":\"event\",\"id\":\"ev-1\",\"event_type\":\"call.initiated\",\"occurred_at\":\"2026-10-29T12:00:00+00:00\",\"payload\":{\"call_control_id\":\"v3:fixture-control-id\",\"call_leg_id\":\"a288d1af-4997-4c37-a05a-a41b1c8112d4\",\"call_session_id\":\"d85f88c7-8a96-4894-a10e-754615fb72ca\",\"connection_id\":\"123456789012345678\",\"from\":\"+12025550149\",\"to\":\"+12025550148\",\"client_state\":\"eyJhdHRlbXB0X2lkIjogIjhjNjZjODI5LWJhZjgtNDZkMy1iM2NiLTA1Y2IwNzY4NjY5ZSJ9\"}},\"meta\":{\"attempt\":1}}",
+  "body_sha256": "35afa16ef32e3a1b727616fa77da32a8fb1f9fd39c785d92c89960ab46f9c425",
+  "headers": {
+    "telnyx-timestamp": "1793275200",
+    "telnyx-signature-ed25519": "HrOtk5XMAaXYUYVvNPNcs53Jh2NHiyU84CyHfavnd4mJ5WLZAgQhP60WPZi8yFE/REC4+MTTM2jDiTTOEDa5CA=="
+  },
+  "expected_signature_accept": true,
+  "note": "Inject fixed_test_clock for offline replay; real current-time validation rejects old vectors."
+}

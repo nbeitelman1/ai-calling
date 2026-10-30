@@ -1,0 +1,61 @@
+{
+  "scope": "OFFLINE_SDK_SIGNATURE_PARITY_ONLY",
+  "sdk_commit": "269609c283e4ecd9774127a1686c41f695654708",
+  "sdk_file_sha256": "2c5135b23b772c86af79c9ab621f17b67f55228a40e33bc520db2c2c2d5e4bed",
+  "our_verifier_sha256": "c5c525caf12a01a2d09b3ffee8f750ec805aecb9265bd3f49fa6eba5d61c1744",
+  "cryptography_version": "46.0.6",
+  "pynacl_version": "1.6.2",
+  "cases": [
+    {
+      "case": "valid",
+      "expected_accept": true,
+      "cryptography_accept": true,
+      "sdk_pynacl_accept": true,
+      "pass": true
+    },
+    {
+      "case": "whitespace_preserved",
+      "expected_accept": true,
+      "cryptography_accept": true,
+      "sdk_pynacl_accept": true,
+      "pass": true
+    },
+    {
+      "case": "body_modified",
+      "expected_accept": false,
+      "cryptography_accept": false,
+      "sdk_pynacl_accept": false,
+      "pass": true
+    },
+    {
+      "case": "old_timestamp",
+      "expected_accept": false,
+      "cryptography_accept": false,
+      "sdk_pynacl_accept": false,
+      "pass": true
+    },
+    {
+      "case": "future_timestamp",
+      "expected_accept": false,
+      "cryptography_accept": false,
+      "sdk_pynacl_accept": false,
+      "pass": true
+    },
+    {
+      "case": "missing_headers",
+      "expected_accept": false,
+      "cryptography_accept": false,
+      "sdk_pynacl_accept": false,
+      "pass": true
+    },
+    {
+      "case": "bad_public_key",
+      "expected_accept": false,
+      "cryptography_accept": false,
+      "sdk_pynacl_accept": false,
+      "pass": true
+    }
+  ],
+  "all_pass": true,
+  "provider_calls": 0
+}

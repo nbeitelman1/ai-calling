@@ -1,0 +1,30 @@
+# Nathan AI Calling — pinned versions verified from PyPI/docs on 2026-10-27.
+# See NOTES.md for what was verified and what was NOT (notably: Pipecat
+# module paths move between releases, so re-verify imports on install).
+#
+# pipecat-ai 1.8.0: PyPI release page, wheel pipecat_ai-1.8.0-py3-none-any.whl,
+# uploaded 2026-08-26. Extras below are the provider extras listed in Pipecat's
+# provider extras are Google (Gemini), Groq (Whisper), and Silero VAD.
+# "websocket" transport support is part of Pipecat's transport
+# docs (FastAPIWebsocketTransport); it is NOT pinned as a separate extra here
+# because its extra name was not confirmed for 1.8.0 — check on install.
+pipecat-ai[elevenlabs,google,groq,silero]==1.8.0
+aiohttp==3.14.5
+cryptography==46.0.6
+loguru==0.7.3
+# fastapi 0.158.2: PyPI release page, wheel fastapi-0.158.2-py3-none-any.whl,
+# uploaded 2026-10-21. (A secondary download tracker showed 0.143.1 as latest
+# on 2026-10-14; the PyPI page itself is the newer, authoritative check.)
+fastapi==0.158.2
+# uvicorn is the standard ASGI runner for FastAPI. No exact version was
+# verified against a PyPI release page in this pass, so it is intentionally
+# NOT exact-pinned here — pin it after `pip index versions uvicorn` on the
+# deploy machine and record the version in NOTES.md before first live run.
+uvicorn==0.54.0
+websockets==17.3
+# NOTE: no `twilio` package line is pinned here. The Twilio helper search
+# surfaced only dev / release-candidate versions (4.9.dev0, 5.0.dev3,
+# 6.0.0rc2, 6.0.0rc11) with no clean stable release confirmed in this pass,
+# so pinning one of those would be guessing. The skeleton does not import
+# twilio at all (loop-in/dial are stubbed); add the stable twilio pin from
+# the deploy machine's `pip index versions twilio` before wiring dial-out.

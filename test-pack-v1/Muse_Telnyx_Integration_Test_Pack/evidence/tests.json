@@ -1,0 +1,263 @@
+{
+  "schema": "telnyx-integration-tests/v1",
+  "utc_epoch": 1793287253,
+  "scope": "REFERENCE_CONTRACT_AND_LOOPBACK_HTTP_NOT_TELNYX_SERVICE",
+  "tests_run": 57,
+  "all_pass": true,
+  "tests": [
+    {
+      "test": "test_http.HTTP.test_fake_endpoint_requires_fixture_auth",
+      "status": "PASS"
+    },
+    {
+      "test": "test_http.HTTP.test_real_http_create_request_shape",
+      "status": "PASS"
+    },
+    {
+      "test": "test_http.HTTP.test_real_http_duplicate_is_acknowledged",
+      "status": "PASS"
+    },
+    {
+      "test": "test_http.HTTP.test_real_http_hangup_ack_not_terminal",
+      "status": "PASS"
+    },
+    {
+      "test": "test_http.HTTP.test_real_http_loss_after_fake_carrier_acceptance",
+      "status": "PASS"
+    },
+    {
+      "test": "test_http.HTTP.test_real_http_tampered_webhook_rejected",
+      "status": "PASS"
+    },
+    {
+      "test": "test_package.PackageIntegrity.test_changed_bytes_detected",
+      "status": "PASS"
+    },
+    {
+      "test": "test_package.PackageIntegrity.test_empty_manifest_refused",
+      "status": "PASS"
+    },
+    {
+      "test": "test_package.PackageIntegrity.test_escape_refused",
+      "status": "PASS"
+    },
+    {
+      "test": "test_package.PackageIntegrity.test_missing_file_detected",
+      "status": "PASS"
+    },
+    {
+      "test": "test_package.PackageIntegrity.test_unlisted_code_detected",
+      "status": "PASS"
+    },
+    {
+      "test": "test_package.PackageIntegrity.test_valid_bytes",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recovery.Recovery.test_ack_then_restart_before_processing",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recovery.Recovery.test_claim_is_single_use",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recovery.Recovery.test_concurrent_claims_only_one",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recovery.Recovery.test_concurrent_duplicate_events",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recovery.Recovery.test_conflicting_leg_does_not_overwrite",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recovery.Recovery.test_conflicting_prepared_request",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recovery.Recovery.test_duplicate_delivery_metadata_does_not_change_event",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recovery.Recovery.test_hangup_ack_is_not_terminal",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recovery.Recovery.test_id_collision_rejected",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recovery.Recovery.test_invalid_signature_never_queued",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recovery.Recovery.test_known_control_can_correlate_without_client_state",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recovery.Recovery.test_late_response_preserves_terminal_state",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recovery.Recovery.test_lost_response_recovered_by_signed_event",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recovery.Recovery.test_no_new_hangup_command_after_window",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recovery.Recovery.test_out_of_order_terminal_does_not_reopen",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recovery.Recovery.test_response_identity",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recovery.Recovery.test_signed_malformed_json_not_queued",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recovery.Recovery.test_stop_before_claim_cancels_without_send",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recovery.Recovery.test_stop_while_unknown_waits_for_identity",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recovery.Recovery.test_unclaimed_event_quarantined",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recovery.Recovery.test_unknown_control_without_hint_is_quarantined",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recovery.Recovery.test_unknown_event_stored_not_executed",
+      "status": "PASS"
+    },
+    {
+      "test": "test_recovery.Recovery.test_wrong_route_quarantined",
+      "status": "PASS"
+    },
+    {
+      "test": "test_signatures.Signatures.test_body_limit",
+      "status": "PASS"
+    },
+    {
+      "test": "test_signatures.Signatures.test_boundary_accepted",
+      "status": "PASS"
+    },
+    {
+      "test": "test_signatures.Signatures.test_duplicate_header_rejected",
+      "status": "PASS"
+    },
+    {
+      "test": "test_signatures.Signatures.test_future_timestamp",
+      "status": "PASS"
+    },
+    {
+      "test": "test_signatures.Signatures.test_invalid_base64",
+      "status": "PASS"
+    },
+    {
+      "test": "test_signatures.Signatures.test_missing_key",
+      "status": "PASS"
+    },
+    {
+      "test": "test_signatures.Signatures.test_missing_signature",
+      "status": "PASS"
+    },
+    {
+      "test": "test_signatures.Signatures.test_mixed_case_headers",
+      "status": "PASS"
+    },
+    {
+      "test": "test_signatures.Signatures.test_modified_body",
+      "status": "PASS"
+    },
+    {
+      "test": "test_signatures.Signatures.test_old_timestamp",
+      "status": "PASS"
+    },
+    {
+      "test": "test_signatures.Signatures.test_short_signature",
+      "status": "PASS"
+    },
+    {
+      "test": "test_signatures.Signatures.test_text_body_refused",
+      "status": "PASS"
+    },
+    {
+      "test": "test_signatures.Signatures.test_timestamp_change",
+      "status": "PASS"
+    },
+    {
+      "test": "test_signatures.Signatures.test_valid_raw_body",
+      "status": "PASS"
+    },
+    {
+      "test": "test_signatures.Signatures.test_wrong_key",
+      "status": "PASS"
+    },
+    {
+      "test": "test_wire.Wire.test_array_destination_refused",
+      "status": "PASS"
+    },
+    {
+      "test": "test_wire.Wire.test_create_shape",
+      "status": "PASS"
+    },
+    {
+      "test": "test_wire.Wire.test_duplicate_json_keys",
+      "status": "PASS"
+    },
+    {
+      "test": "test_wire.Wire.test_hangup_shape_and_escaping",
+      "status": "PASS"
+    },
+    {
+      "test": "test_wire.Wire.test_metadata_rejects_extra_fields",
+      "status": "PASS"
+    },
+    {
+      "test": "test_wire.Wire.test_naive_time_rejected",
+      "status": "PASS"
+    },
+    {
+      "test": "test_wire.Wire.test_sip_outside_scope",
+      "status": "PASS"
+    }
+  ],
+  "python_version": "3.12.3",
+  "cryptography_version": "46.0.6",
+  "socket_guard": {
+    "loopback_connects": 8,
+    "blocked_external_connects": 0
+  },
+  "source_sha256": {
+    "export_vectors.py": "8c110c1c87a2d412d121aba087112701159e6f628a872163ae26c7ac67fbefb2",
+    "fixtures_support.py": "dc0b4a592a82d0434f8071ce835e990e921e83e37f385499f3ef07f6305da0a5",
+    "http_lab.py": "3228782a7d17d66d797beef3f78d4372b7d476e014a8f304a435d8f026178f68",
+    "run_mutations.py": "9ee4c2d26403f2beffc37ccae3ff8eb9532128a2f6d1bafb3d85776a8fff46d7",
+    "run_tests.py": "df2e6e12613d8fd9cfbc9557258c874cba99d3c70bbaf110d8d2c4924ebaea4c",
+    "sdk_compare.py": "349248b32bbff354c696af4f53e8fa368266b364bcf7ffe95b276b2490acbd4e",
+    "signatures.py": "c5c525caf12a01a2d09b3ffee8f750ec805aecb9265bd3f49fa6eba5d61c1744",
+    "store.py": "9a666a4a4bf2071e6fdd9e00309178bcd214a5ad9a7352fb55b3eb7d4ec9e5a3",
+    "tests/test_http.py": "887dbf7b2ddfb20c928bfaf56e30065bd263b7ee7528270a37b99d9f125eabbd",
+    "tests/test_package.py": "659733b5fd3e729e063533eaf8c227b26a31b199867cbd6b96a76ce8b4395fa3",
+    "tests/test_recovery.py": "0c74f998a612bd914020b7c1507fe6799ef64d7dea14da30c3f1936465c70372",
+    "tests/test_signatures.py": "1d86df82d528eb2273c98e06b17ddf7ea7b7e6398ba5e96dfa9b0a12dc82cc73",
+    "tests/test_wire.py": "8358377b6a213aa45bf3076a77011f459a1a848af6b5487d3f7136368f92de4c",
+    "verify_manifest.py": "510cfaa1bbcb749d810d5847561f6220969c724f9c5140193f573ec4eac7345d",
+    "wire.py": "f843fd1c759b67741cb6d79e289a398bbf55332fa441e744d760bac4b4f47518"
+  },
+  "real_provider_calls": 0,
+  "muse_runtime_tested": false,
+  "audio_pipeline_tested": false
+}

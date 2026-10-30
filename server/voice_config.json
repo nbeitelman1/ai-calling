@@ -1,0 +1,32 @@
+{
+  "first_test_voice": {
+    "provider": "ElevenLabs",
+    "name": "Jessica",
+    "voice_id": "cgSgspJ2msm6clMCkdW9",
+    "status": "Nathan's pick Oct 29, 2026 (playful, bright, warm premade stock voice); replaces Natasha — the Natasha voice id does not exist on this ElevenLabs account, proven by the 3:12pm test call TTS 1008 failure and a GET /v1/voices check. Audition against 1-2 other stock feminine voices still open before any business call"
+  },
+  "hard_rules": [
+    "No cloning of Megan Fox, Madison Beer, or any other real person",
+    "No impersonating Nathan or any real employee",
+    "If asked if AI: 'I'm Nathan's AI assistant, calling for him.'"
+  ],
+  "provider_candidates": [
+    "Cartesia",
+    "ElevenLabs",
+    "Deepgram Aura"
+  ],
+  "selection_method": "Listen to 2-3 stock feminine voices on a test call to Nathan's phone and pick by ear",
+  "style": {
+    "gender": "feminine",
+    "pace": "slightly slower than default, natural pauses",
+    "pitch": "mid-low feminine range",
+    "sentence_style": "short spoken sentences, no paragraphs read aloud",
+    "tone": "warm, confident, slightly sultry, not breathy to the point of distraction"
+  },
+  "voice_direction": "Feminine, warm, confident, slightly sultry \u2014 vibe direction only, NOT a clone of any real person",
+  "stt": {
+    "provider": "OpenAI",
+    "mode": "streaming transcription (OpenAI Realtime STT)",
+    "note": "Deepgram DROPPED Oct 29, 2026 by Nathan: fresh key + correct Token header still 401 through the vault path. Do not re-add Deepgram without a new provisioning mechanism."
+  }
+}

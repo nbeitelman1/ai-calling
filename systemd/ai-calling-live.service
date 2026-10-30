@@ -1,0 +1,68 @@
+[Unit]
+Description=Nathan AI Calling live server (Telnyx webhooks + media websocket)
+After=network.target
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=simple
+# Instance adaptation (Oct 29, 2026): this VM has no hatch user; services run as root.
+User=root
+Group=root
+WorkingDirectory=/home/hatch/workspace/ai-calling/server
+EnvironmentFile=/home/hatch/workspace/ai-calling/.webhook-public-key
+EnvironmentFile=/home/hatch/workspace/ai-calling/.internal-token
+EnvironmentFile=/home/hatch/workspace/ai-calling/.provider-credentials
+# Instance adaptation (Oct 29, 2026): this VM's egress proxy requires auth,
+# and the loopback shim's unauthenticated CONNECT hangs against it
+# (preflight timed out through the shim at deploy). The new path has no
+# outbound websocket clients (all provider calls are plain HTTPS via
+# trust_env clients), so route provider traffic through the authenticated
+# egress proxy directly instead of the shim. The shim unit stays installed
+# but unused by this service.
+EnvironmentFile=/home/hatch/.config/egress-proxy.env
+Environment=NO_PROXY=localhost,127.0.0.1,::1
+Environment=no_proxy=localhost,127.0.0.1,::1
+Environment=AI_CALLING_LOG_DIR=/home/hatch/workspace/ai-calling/logs
+# NLTK sentence-tokenizer data (punkt_tab) is bundled in the project tree:
+# the egress proxy's 198.18.x address trips NLTK's downloader SSRF guard,
+# so the data can never be fetched at runtime on this VM. Pipecat's TTS
+# sentence aggregation raises LookupError without it and live calls go
+# silent (Oct 30, 2026). Keep nltk_data/ non-group-writable (chmod go-w)
+# or NLTK's path security refuses to read it.
+Environment=NLTK_DATA=/home/hatch/workspace/ai-calling/nltk_data
+Environment=AI_CALLING_PHRASE_CACHE=/home/hatch/workspace/ai-calling/logs/phrase-cache
+Environment=GROQ_STT_MODELS=whisper-large-v3-turbo,whisper-large-v3
+Environment=GEMINI_FAST_MODELS=gemini-3.5-flash-lite
+Environment=GEMINI_FRONTIER_MODELS=gemini-3.8-flash
+Environment=ELEVENLABS_TTS_MODELS=eleven_flash_v2_5
+# Set these to the current account-console values before enabling the service.
+Environment=GROQ_AUDIO_SECONDS_DAILY_LIMIT=28800
+Environment=GEMINI_REQUESTS_DAILY_LIMIT=1000
+Environment=ELEVENLABS_CHARACTERS_MONTHLY_LIMIT=20000
+Environment=AI_CALLING_TTS_CHAR_LIMIT=4000
+Environment=AI_CALLING_SILENCE_SECONDS=12
+Environment=AI_CALLING_ANSWER_TIMEOUT_SECONDS=45
+Environment=AI_CALLING_LOG_JSON=1
+Environment=AI_CALLING_LOG_RETENTION_DAYS=30
+ExecStartPre=/home/hatch/workspace/ai-calling/.deploy-venv/bin/python prestart.py
+ExecStart=/home/hatch/workspace/ai-calling/.deploy-venv/bin/python start_live_server.py
+Restart=always
+RestartSec=3
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ReadWritePaths=/home/hatch/workspace/ai-calling/logs
+MemoryMax=1G
+TasksMax=256
+CPUQuota=200%
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

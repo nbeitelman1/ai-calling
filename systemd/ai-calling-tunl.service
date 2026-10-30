@@ -1,0 +1,14 @@
+[Unit]
+Description=Public tunnel for the AI calling server (tunl.online reserved subdomain musecallingthing, SSH through the egress proxy)
+After=network.target
+
+[Service]
+Type=simple
+Environment=HOME=/home/hatch
+EnvironmentFile=/home/hatch/.config/egress-proxy.env
+ExecStart=/home/hatch/workspace/ai-calling/bin/tunl-calling-tunnel.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

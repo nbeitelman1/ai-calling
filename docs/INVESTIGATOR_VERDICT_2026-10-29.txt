@@ -1,0 +1,561 @@
+Self-Hosted AI Calling Investigation Handoff
+Model: azure/gpt-6-astra • Created: 10/29/2026 • Exported: 10/29/2026
+
+
+
+
+User                                                                                                             04:48 PM
+
+
+
+
+Assistant                                                                                                        04:48 PM
+
+I’ll audit the handoff against the Telnyx, Pipecat, and OpenAI documentation, focusing on what the evidence proves
+and what the next test needs to distinguish. I won’t place a call, change the service, or treat the pasted approvals as
+ authorization for a new dial.
+
+ Tool: text_editor_code_execution
+
+
+ Tool: text_editor_code_execution
+
+Thinking...
+**Organizing research tasks**
+I need to ensure I accurately understand the tasks at hand, with a focus on reasonable auditing. I'll look into three
+main paths, considering security and possibly a fourth legal route as optional. I should manage the tool usage
+efficiently, keeping time and budget in check—around 27k tokens initially and maybe 30k, but now it feels close to
+28k with 59 left to work with. I aim for effective analysis within a 10k token limit.
+I’m splitting the audit into three parallel research tracks:
+
+
+
+ Track                   What I’m checking                                                              Status
+
+ Telnyx media            Track names, codec framing, and bidirectional playback                         In progress
+
+ Pipecat / Silero        VAD state logic, resampling, and what the counters prove                       In progress
+
+ OpenAI STT              Server-VAD support, buffer commits, and a useful diagnostic fallback           In progress
+
+
+I’ll also flag any safety controls that should move ahead of another test call.
+
+ Tool: search_web
+
+
+ Tool: search_web
+
+
+ Tool: search_web
+
+
+ Tool: read_url
+
+
+ Tool: read_url
+
+
+ Tool: search_web
+
+
+ Tool: search_web
+
+Thinking...
+**Evaluating software tasks**
+I’m considering the need to address errors if a certain version isn’t available from PyPI. It seems OK that existing
+
+
+                                                                  Page 1
+methods might be sufficient for now. I also need to think about whether any skills in routing software without code
+might apply here. I can do a parallel fetch and read local references while simulating downloads. I want to ensure
+preflight security is accounted for, maybe updating any relevant research or tables.
+I found a potentially blocking mistake in the new inbound filter: Telnyx’s request parameter is inbound_track
+, but its documented WebSocket media.track value is inbound.
+ If the deployed filter matches the handoff literally, it would discard valid caller audio. That needs an offline check
+before the measurement call.
+
+OpenAI’s documentation also gives us a way to distinguish “audio never arrived” from “audio arrived but was never
+committed for transcription.”
+
+ Tool: read_url
+
+
+ Tool: bash_code_execution
+
+
+ Tool: text_editor_code_execution
+
+
+ Tool: search_web
+
+
+ Tool: search_web
+
+
+ Tool: bash_code_execution
+
+Thinking...
+**Inspecting thresholds**
+I’m looking into the pipecat exact vad threshold. There’s a frame size of 3032, which is significant. I need to pay
+attention to the chunk counts, especially since they can get overlooked inside the while loop. Also, there are 6
+sequential possibilities across invocations, which I need to inspect further. This feels like a bit of a puzzle that I'm
+piecing together, but I'm committed to sorting it out!
+
+ Tool: text_editor_code_execution
+
+
+ Tool: text_editor_code_execution
+
+
+ Tool: text_editor_code_execution
+
+
+ Tool: text_editor_code_execution
+
+
+ Tool: text_editor_code_execution
+
+The source check has uncovered another issue beyond threshold tuning: in the publishedPipecat 1.8.0
+ code, VAD confirmation happens after an entire incoming audio buffer is processed. That means buffer boundaries
+can affect whether a qualifying speech run becomes a speech event. I’m testing that behavior offline.
+
+
+
+ Track              Status          Finding
+
+ Telnyx media       Complete        The handoff’s filter value conflicts with the documented wire format
+
+ Pipecat / Silero   Testing         Rate-pinning diagnosis is supported; buffer-dependent VAD behavior needs a regression test
+
+ OpenAI STT         Complete        Local-VAD mode requires a commit; an empty transcript does not prove missing audio
+
+
+I also found a Telnyx-side call-duration limit that can protect a test even if the application stalls.
+
+
+
+
+                                                                 Page 2
+ Tool: text_editor_code_execution
+
+
+ Tool: bash_code_execution
+
+
+ Tool: read_url
+
+
+ Tool: search_web
+
+
+ Tool: search_web
+
+
+ Tool: read_url
+
+
+ Tool: read_url
+
+Thinking...
+**Clarifying research priorities**
+I need to focus on the most significant issues and avoid getting sidetracked by minor defects. The final findings
+should be structured around six main points. The primary issue involves a new regression that I can't fully explain
+with the data from call9. There's an original bug that might relate to interleaving narrowband roots, but it hasn't been
+ proven yet. We should also acknowledge that positive controls don't demonstrate Silero's ability to detect live
+speech. The calibration process is adding delays, and we need to consider how handoff volumes might impact our
+results.
+Thinking...
+**Revising metric definitions**
+I need to reconcile the metric definitions without assigning blame. The 1% confidence gate and the passing run0
+only apply to different filters and definitions, which should be recorded separately. Regarding the cloud security
+SSRF issue, I won't mention it unless there are changes. I also need to manage call cost control and estimate logs
+for all providers. It's important to note specific limits and configurations while acknowledging the lack of pricing data
+affects solid cost calls. Finally, I need to list corrective statuses for several packages and hypotheses.
+Thinking...
+**Addressing new release dependencies**
+I’m noticing a new release involves buffer dependencies related to the STT server's VAD. The support
+documentation claims compatibility with pre-existing models but lacks exact proof. I should refer to the documented
+transcription-session schema, which includes `gpt-4o-mini-transcribe` and `server_vad`—indicating it's a
+configuration to test, not a reason for assuming a model change. It's crucial to avoid unsupported endpoints and
+ensure I’m using the current GA session schema to keep everything stable.
+
+
+Investigator verdict
+
+I would pause the next measurement call until the inbound filter is checked.
+ The handoff contains a likely track-name mistake that could discard all caller audio, and I reproduced an additional
+VAD issue in the published Pipecat 1.8.0 release that makes detection depend on incoming buffer boundaries.
+
+I reviewed the provider documentation, downloaded the Pipecat 1.8.0 package, inspected its source, and ran
+credential-free tests.
+I have not inspected your deployed files, accessed the VM, changed anything, or placed a call.
+ Deployment-specific conclusions below remain conditional.
+
+
+Findings at a glance
+
+
+
+
+                                                         Page 3
+ Finding                                                    Assessment
+
+ New filter accepts inbound_track                           Likely blocking defect: Telnyx documents media.track as inbound
+
+ Pipecat VAD depends on buffer boundaries                   Reproduced in the published 1.8.0 state machine
+
+ Earlier sample-rate pinning diagnosis                      Supported by the release source
+
+ Narrowband speech needs lower thresholds                   Still a hypothesis—not established
+
+ Empty transcript proves OpenAI received no usable audio    Incorrect inference: audio might never have been committed
+
+ Broken application-side hangup is minor                    Should be elevated before another call
+
+
+
+
+1. Highest priority: the new filter appears to use the wrong track name
+
+Two different Telnyx fields use different values:
+
+
+
+ Location                                                                          Caller-audio value
+
+ Call Control request: stream_track                                                inbound_track
+
+ Incoming WebSocket event: media.track                                             inbound
+
+
+Telnyx’s WebSocket specification explicitly shows "track": "inbound"
+. Its streaming-command documentation separately defines inbound_track, outbound_track, and both_tracks
+ as request values. [1] [2]
+
+The handoff says the newly deployed filter:
+
+     drops media events whose track is not None/"inbound_track"
+
+If that describes the actual code, and no earlier wrapper normalizes the field, valid "inbound"
+ events will all be dropped.
+
+I evaluated that exact acceptance rule offline:
+
+
+
+ Incoming media.track                                Accepted by the handoff’s rule?
+
+ inbound                                             No
+
+ outbound                                            No
+
+ inbound_track                                       Yes
+
+ Missing / None                                      Yes
+
+
+
+What to do before dialing
+
+Inspect the raw-event-to-filter path, not just the filter in isolation:
+
+
+
+
+                                                           Page 4
+ • A raw Telnyx event with media.track == "inbound" must reach the decoder.
+ • A raw event with media.track == "outbound" must not reach the inbound resampler or VAD.
+ • Missing or unknown track values need an explicit, logged policy. Do not silently treat them as caller audio on a
+   dual-track stream.
+ • Count events before and after filtering.
+ • Verify that any tests use Telnyx’s actual wire-format values—not only internally invented fixtures.
+
+Important timeline distinction:
+ this potential regression was introduced after call 9. It could break the next call, but it cannot explain the earlier
+failures.
+
+Also, receiving only the inbound track does not inherently disable bot playback
+. Track selection controls the media Telnyx sends to the application; bidirectional streaming separately enables
+application-to-Telnyx media. Keeping the existing playback settings while selecting inbound-only reception is a
+supported architectural direction, subject to an integration test. [1]
+
+
+
+
+2. New finding: Pipecat 1.8.0’s VAD is sensitive to buffer boundaries
+
+I inspected VADAnalyzer._run_analyzer in the downloaded 1.8.0 release
+, rather than assuming the latest documentation matched it.
+
+Its sequence is:
+
+ 1. Process every complete 32 ms analysis window in the incoming buffer.
+ 2. Update the tentative speech/silence counters.
+ 3. After the loop finishes, check whether to confirm SPEAKING or QUIET.
+
+Consequently, a qualifying speech run can reach six windows, then be reset by a failing window
+within the same incoming buffer, before speech is confirmed.
+
+
+Offline reproduction
+
+I executed the release’s actual state-machine method with controlled confidence scores and volume fixed above its
+gate.
+
+
+
+ Test                                                                                            Result
+
+ Six passing confidence windows followed by two failing windows, delivered one window per call   SPEAKING observed
+
+ The same score sequence, delivered using 3,032-byte input buffers                               No SPEAKING observed
+
+ Sustained passing confidence, using 3,032-byte buffers                                          SPEAKING observed
+
+
+These are state-machine tests, not Silero speech-recognition tests.
+They prove buffer-dependent behavior, not that this caused Lauren’s failed calls.
+
+The handoff’s reported 3,032-byte frame represents 94.75 ms
+of mono PCM16 at 16 kHz—almost three VAD windows. That makes the behavior relevant to this pipeline.
+
+
+
+
+                                                           Page 5
+Consequence for the investigation
+
+The explanation “six consecutive passing chunks are sufficient” is incomplete for this release.
+Where those chunks fall relative to input-buffer boundaries also matters.
+
+Before reducing thresholds:
+
+ •   Add a packetization-invariance regression test: identical audio, different input chunk sizes.
+ •   Observe internal window scores, counters, and state—not only the state returned after an entire buffer.
+ •   Evaluate bounded re-chunking or a narrowly reviewed state-machine correction in the test harness first.
+ •   Do not immediately edit the installed library or broadly upgrade Pipecat.
+
+There is another replay caveat: 1.8.0 resets Silero’s recurrent state on a five-second wall-clock schedule.
+ Fast offline replay and real-time streaming can therefore exercise different reset behavior. Record reset timing or
+control it in the diagnostic harness.
+
+
+
+
+3. The evidence does not yet isolate “narrowband VAD confidence” as the
+root cause
+
+The sample-rate correction is supported: Pipecat preserves a constructor-provided sample rate when
+set_sample_rate()
+runs. Removing the incorrect 8 kHz pin is therefore a valid correction for a 16 kHz input stream. [3]
+
+However, the broader diagnosis still needs stronger evidence.
+
+
+What the counters establish
+
+According to the handoff:
+
+ •   WebSocket media messages reached the application.
+ •   Decoded audio frames reached the pipeline.
+ •   No confirmed speech event was observed.
+ •   No final transcript was recorded.
+
+
+What those counters do not establish
+
+They do not prove that:
+
+ •   The frames contained intelligible caller speech.
+ •   The correct track survived filtering.
+ •   Codec, channel count, and actual sample rate matched the labels.
+ •   Audio ordering and duration were preserved.
+ •   Audio reached OpenAI.
+ •   OpenAI received a commit.
+ •   The recording/transcript tap captured every relevant downstream event.
+
+Telnyx says the start.media_format
+event identifies encoding, rate, and channels; media contains raw codec payloads without RTP headers; and media
+ordering is not guaranteed. Those are validation points, not assumptions to infer from frame counts. [4]
+
+
+                                                        Page 6
+Better diagnostic controls
+
+Before blaming the thresholds, establish:
+
+ 1. A real-speech positive control through the same decoder, resampler, and VAD.
+ 2. A silence/noise negative control.
+ 3. Correct duration accounting across each stage.
+ 4. An intelligibility check on a consented, protected diagnostic sample, if audio capture is approved.
+
+Measure total samples, not just frames. If every reported frame were 3,032 bytes at 17.7 frames/second, that would
+ represent approximately 1.68 audio seconds per wall-clock second
+. That is consistent with excess media entering the stream, but the calculation is only meaningful if the sizes and
+measurement interval are representative.
+
+Finally, instrumentation must record the confidence already computed
+. Do not invoke Silero a second time merely to log confidence: it is stateful, so that would alter the experiment.
+
+
+
+
+4. Extend the investigation through OpenAI’s commit boundary
+
+Pipecat’s local-VAD mode sends audio to OpenAI, then commits the buffer when it receives
+VADUserStoppedSpeakingFrame
+. Without that event, buffered audio may never produce the expected finalized transcription. This behavior is both
+documented and present in the inspected 1.8.0 source. [5]
+
+“Connected and ready” is not a transcription-path test.
+
+The next diagnostic should trace these boundaries:
+
+
+
+ Boundary                   Evidence to record
+
+ Session configuration      Accepted model, audio format, and turn-detection settings from session.updated
+
+ Audio transmission         Append count, decoded audio bytes, send failures
+
+ Turn completion            Local stop event and commit request
+
+ Server acceptance          input_audio_buffer.committed
+
+ Transcription              Delta, completed, failed, and API error events
+
+ Application delivery       TranscriptionFrame, transcript tap, and aggregator receipt
+
+
+OpenAI documents explicit buffer commits and transcription completion events; completion events should be
+correlated using item_id. [6]
+
+
+A useful controlled diagnostic
+
+With separate approval for any provider usage, send a known speech fixture through the same STT session and
+issue one explicit commit, without dialing anyone.
+
+ • If transcription succeeds, session configuration, audio submission, commit, and transcript handling work for that
+   fixture.
+
+
+                                                           Page 7
+ • If it fails, local VAD is not the only unresolved issue.
+
+This is a diagnostic—not a recommendation to deploy timer-based commits that might split people mid-sentence.
+
+
+Server VAD is a documented alternative
+
+OpenAI’s transcription-session reference lists both gpt-4o-mini-transcribe and server_vad
+. That makes this a documented configuration to validate, rather than a reason to assume a model change is
+necessary. Acceptance by your exact live session remains untested.
+ The older session-creation endpoint is deprecated, so preserve the current GA session format rather than copying
+an old beta payload. [7]
+
+If approved:
+
+ •   Use server VAD as the turn-boundary authority.
+ •   Remove the competing local VAD processor from that configuration.
+ •   Verify Pipecat’s external turn-strategy integration.
+ •   Keep the text LLM and Jessica TTS unchanged.
+
+Pipecat explicitly documents this mode and warns against retaining a separate VAD processor alongside it.
+You do not need to switch to a speech-to-speech assistant to try server-side transcription VAD.[5]
+
+
+
+
+5. Elevate hangup and duration enforcement before another test
+
+The missing watchdog plus known broken application-side hangup should not remain minor cleanup.
+
+
+Telnyx can enforce a carrier-side duration limit
+
+The dial API supports time_limit_secs
+, measured after answer. Telnyx terminates the call when the limit is reached and emits acall.hangup
+ event with cause time_limit. The documented range is 30–14,400 seconds. [8]
+
+For a short diagnostic, use an explicitly approved short limit within the existing ten-minute ceiling. This protects
+against an application stall, but does not replace provider-session cleanup.
+
+
+The proxy failure has a concrete explanation
+
+Pipecat 1.8.0’s serializer creates aiohttp.ClientSession() without proxy configuration. Aiohttp does not
+read proxy environment variables by default; trust_env=True or explicit proxy configuration is needed. [9]
+
+Route hangup through the approved proxy path, use bounded timeouts, and verify termination—not merely that a
+hangup request was attempted.
+
+A duration limit is not a $1 spending guarantee.
+The budget must include telephony, STT, LLM, and TTS usage, with bounded generation and shutdown behavior.
+Balance deltas and estimated cents do not demonstrate an enforced cap.
+
+
+
+
+                                                          Page 8
+Consent belongs before measurement, not only before business calls
+
+For any approved audio capture or transcription test, confirm Lauren’s informed consent beforehand. Florida’s
+general consent provision refers to prior consent from all parties; the opening “Nathan’s assistant” sentence alone
+does not establish consent to transcription or recording. [10]
+
+Separately, the FCC treats AI-generated human voices as artificial voices under the TCPA, with applicable consent
+requirements and exemptions. Using a stock voice does not remove those obligations. This is a compliance
+checkpoint, not a conclusion that the earlier tests were unlawful. [11]
+
+
+
+
+Revised next-step order
+
+ 1. Inspect the deployed filter and add raw Telnyx wire-format tests.
+    Resolve inbound versus inbound_track before any dial.
+ 2. Validate the VAD test harness.
+    Include real speech, silence, buffer-size invariance, and controlled reset behavior.
+ 3. Add instrumentation through the STT commit and completion boundaries.
+    Log metadata and counts without exposing credentials or raw audio.
+ 4. Verify termination and budget safeguards.
+    Fix the hangup path and include a carrier-side duration limit.
+ 5. Only then request approval for one bounded measurement call.
+    Recheck the existing tunnel, use a fresh attempt, and ensure media registration is current. Treat the handoff’s
+    4:46 p.m. restart as its latest reported state; do not restart again reflexively.
+ 6. Choose the next change from the earliest failing boundary.
+
+
+
+ Observed failure                                                  Next focus
+
+ Raw inbound events arrive, accepted frames do not                 Track filter
+
+ Accepted audio is distorted, silent, or time-expanded             Decode, ordering, resampling, track separation
+
+ Intelligible audio reaches VAD, but speech events fail            State-machine behavior, then thresholds
+
+ Audio is appended, but no commit occurs                           Turn-completion path
+
+ Commit is acknowledged, but transcription fails                   STT configuration and provider errors
+
+ Transcript exists, but no response follows                        Aggregator, LLM, and response delivery
+
+
+Bottom line:
+ measurement-first remains the right approach, but the measurement path is not yet trustworthy. Check the likely
+track-filter regression, account for the reproduced Pipecat buffer-boundary behavior, and trace OpenAI commits
+before spending another call on threshold tuning.
+
+
+
+
+Total messages: 2 • Pages: 9
+
+
+
+                                                          Page 9
+

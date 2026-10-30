@@ -1,0 +1,20 @@
+# Secrets — never commit
+.provider-credentials
+.pinggy-token
+.internal-token
+.webhook-public-key
+.env
+*.env
+
+# Local environments, caches, runtime data
+.deploy-venv/
+__pycache__/
+*.pyc
+logs/
+nltk_data/
+
+# Backups, exports, scratch
+backup-pre-merge-2026-10-29/
+return-2026-10-29/
+*.zip
+*.bak

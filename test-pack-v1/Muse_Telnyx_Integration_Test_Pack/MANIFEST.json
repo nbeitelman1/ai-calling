@@ -1,0 +1,118 @@
+{
+  "schema": "muse-pack-manifest/v1",
+  "scope": "TELNYX_OFFLINE_TEST_PACK_NOT_PRODUCTION",
+  "files": {
+    "MUSE_HANDOFF.md": {
+      "bytes": 2018,
+      "sha256": "9ed39f8040676844f955d458bc816a9e6320f6cf3c26ef38637afff5e9eddd2d"
+    },
+    "START_HERE.md": {
+      "bytes": 1877,
+      "sha256": "58233076e7a049c54db17b1618c46c239be06fc8e56706cec858829479403552"
+    },
+    "config.example.json": {
+      "bytes": 406,
+      "sha256": "a7b855af0a553c2fe82b0f46279389efd810ed6e1351e1251b9828176ed93a89"
+    },
+    "docs/CONTRACT.md": {
+      "bytes": 1936,
+      "sha256": "825aa8c14f678ea81d1c7ccb3bb6c9de70cd5707d0659a1642c047c88341bf01"
+    },
+    "docs/RECOVERY_AND_LIMITS.md": {
+      "bytes": 2296,
+      "sha256": "b6677f6a8ca2e63cef713a117df45c7115b2afe7ca9fb1be7e892ab6e80a0494"
+    },
+    "docs/RESULTS.md": {
+      "bytes": 1634,
+      "sha256": "d18b2f6dd408dcea9583094e27a02c49e3774f6a0801593cd3099c27b65564f5"
+    },
+    "docs/SOURCES.md": {
+      "bytes": 1867,
+      "sha256": "b463e1237d6d1f693eb2f421326522e7b66ac8491d681ce4697ab61ea51e1702"
+    },
+    "evidence/mutations.json": {
+      "bytes": 455,
+      "sha256": "67bbe8bf5c3395696b6dcc18f1cb946d9be7c7cfeebb36f3af092566f70a80bf"
+    },
+    "evidence/sdk_parity.json": {
+      "bytes": 1572,
+      "sha256": "8aef5e2aa03486d611a01fb28581b38662cc391eeaaffcfd3fa417b7280e8c9f"
+    },
+    "evidence/tests.json": {
+      "bytes": 7957,
+      "sha256": "bbad9c31d26896fd8a9a26dd05beefbf16bae3788fb149536d0e852e002f2283"
+    },
+    "export_vectors.py": {
+      "bytes": 948,
+      "sha256": "8c110c1c87a2d412d121aba087112701159e6f628a872163ae26c7ac67fbefb2"
+    },
+    "fixtures/signed_event.json": {
+      "bytes": 1110,
+      "sha256": "7c3e3ac805bac569608e1282a20a1c7059f9b7751e429391f0bd7a39695c5e06"
+    },
+    "fixtures_support.py": {
+      "bytes": 1683,
+      "sha256": "dc0b4a592a82d0434f8071ce835e990e921e83e37f385499f3ef07f6305da0a5"
+    },
+    "http_lab.py": {
+      "bytes": 4025,
+      "sha256": "3228782a7d17d66d797beef3f78d4372b7d476e014a8f304a435d8f026178f68"
+    },
+    "requirements-sdk-check.txt": {
+      "bytes": 111,
+      "sha256": "d0c64a29adbd56a1c83d61390f72bd6fb479a4104741ce7d537969ba447bd938"
+    },
+    "requirements.txt": {
+      "bytes": 104,
+      "sha256": "fbc7367d755d60d134f6bdc72025edae992b4eb923e1a91e466a1daf82932bb4"
+    },
+    "run_mutations.py": {
+      "bytes": 2087,
+      "sha256": "9ee4c2d26403f2beffc37ccae3ff8eb9532128a2f6d1bafb3d85776a8fff46d7"
+    },
+    "run_tests.py": {
+      "bytes": 2634,
+      "sha256": "df2e6e12613d8fd9cfbc9557258c874cba99d3c70bbaf110d8d2c4924ebaea4c"
+    },
+    "sdk_compare.py": {
+      "bytes": 2798,
+      "sha256": "349248b32bbff354c696af4f53e8fa368266b364bcf7ffe95b276b2490acbd4e"
+    },
+    "signatures.py": {
+      "bytes": 1684,
+      "sha256": "c5c525caf12a01a2d09b3ffee8f750ec805aecb9265bd3f49fa6eba5d61c1744"
+    },
+    "store.py": {
+      "bytes": 8684,
+      "sha256": "9a666a4a4bf2071e6fdd9e00309178bcd214a5ad9a7352fb55b3eb7d4ec9e5a3"
+    },
+    "tests/test_http.py": {
+      "bytes": 3407,
+      "sha256": "887dbf7b2ddfb20c928bfaf56e30065bd263b7ee7528270a37b99d9f125eabbd"
+    },
+    "tests/test_package.py": {
+      "bytes": 1578,
+      "sha256": "659733b5fd3e729e063533eaf8c227b26a31b199867cbd6b96a76ce8b4395fa3"
+    },
+    "tests/test_recovery.py": {
+      "bytes": 7220,
+      "sha256": "0c74f998a612bd914020b7c1507fe6799ef64d7dea14da30c3f1936465c70372"
+    },
+    "tests/test_signatures.py": {
+      "bytes": 2622,
+      "sha256": "1d86df82d528eb2273c98e06b17ddf7ea7b7e6398ba5e96dfa9b0a12dc82cc73"
+    },
+    "tests/test_wire.py": {
+      "bytes": 1686,
+      "sha256": "8358377b6a213aa45bf3076a77011f459a1a848af6b5487d3f7136368f92de4c"
+    },
+    "verify_manifest.py": {
+      "bytes": 1646,
+      "sha256": "510cfaa1bbcb749d810d5847561f6220969c724f9c5140193f573ec4eac7345d"
+    },
+    "wire.py": {
+      "bytes": 2734,
+      "sha256": "f843fd1c759b67741cb6d79e289a398bbf55332fa441e744d760bac4b4f47518"
+    }
+  }
+}

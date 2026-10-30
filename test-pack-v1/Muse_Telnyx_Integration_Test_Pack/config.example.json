@@ -1,0 +1,10 @@
+{
+  "scope": "DOCUMENTATION_ONLY_NOT_EXECUTABLE",
+  "live_enabled": false,
+  "authorized_spending_cents": 0,
+  "authorized_destinations": [],
+  "real_carrier_connection_ref": null,
+  "real_public_key_ref": null,
+  "real_api_credential_ref": null,
+  "note": "The test pack ignores this file; it has no live transport to enable. Muse must implement its own production configuration and approval boundary."
+}
