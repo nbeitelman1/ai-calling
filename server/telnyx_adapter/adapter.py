@@ -54,6 +54,19 @@ Rules that must not be weakened:
   separate, explicit step after hangup.
 - Hangup is monotonic and absorbing: once hangup, no later event or
   late create response reopens the attempt.
+- Budget reservations follow the attempt lifecycle. prepare() holds
+  the job's full estimate in reserved_cents while its attempt is in
+  flight, and every transition of the attempt into a terminal state
+  (hangup, closed_unsubmitted, cancelled_before_submit) converts the
+  reservation to the job's recorded spend in the same transaction
+  (reserved_cents := spent_cents). reconcile_bill() then records the
+  actual bill into both fields. The monthly cap therefore sums
+  in-flight estimates plus finished jobs' recorded spend -- never a
+  finished job's stale estimate. (Before this rule, reservations were
+  never released: 20 finished October jobs x 100 cents of estimates
+  exhausted the $20 cap and refused a 21st call whose real monthly
+  spend was ~0. A one-time operator release applied the same
+  conversion by hand on Oct 30, 2026.)
 """
 from __future__ import annotations
 
@@ -255,7 +268,25 @@ class TelnyxAdapter:
             conn.execute(
                 "INSERT OR IGNORE INTO attempts(attempt_id,job_id,payload_json,state,stop)"
                 " VALUES(?,?,?,?,?)", (attempt_id, job_id, payload, state, stop))
+            if state == "cancelled_before_submit":
+                # Born terminal (a stop predates the job): the attempt
+                # can never be claimed, so its reservation converts to
+                # recorded spend (zero) immediately.
+                self._release_job_reservation(conn, job_id)
         return request
+
+    @staticmethod
+    def _release_job_reservation(conn, job_id: str) -> None:
+        """Convert a finished job's budget reservation to recorded spend.
+
+        Called in the same transaction as the attempt's transition
+        into a terminal state, and from reconcile_bill() once the
+        actual bill is known. Idempotent: a job already at
+        reserved == spent is untouched in effect.
+        """
+        conn.execute(
+            "UPDATE jobs SET reserved_cents=spent_cents WHERE job_id=?",
+            (job_id,))
 
     def get_attempt(self, attempt_id: str) -> dict:
         with self._tx() as conn:
@@ -490,6 +521,10 @@ class TelnyxAdapter:
                 conn.execute(
                     "UPDATE attempts SET state=? WHERE attempt_id=?",
                     (new_state, attempt_id))
+            # Both resolution outcomes are terminal (hangup or
+            # closed_unsubmitted): release the job's reservation in
+            # the same transaction.
+            self._release_job_reservation(conn, row["job_id"])
             receipt = {"attempt_id": attempt_id, "prior_state": row["state"],
                        "state": new_state, "basis": basis,
                        "operator": operator, "evidence_ref": evidence_ref,
@@ -690,6 +725,7 @@ class TelnyxAdapter:
         control_id = attempt.get("control_id")
         answered = False
         hangup = False
+        hangup_source = None
         with self._tx() as conn:
             rows = conn.execute(
                 "SELECT data_json FROM events WHERE processed=1 "
@@ -699,9 +735,16 @@ class TelnyxAdapter:
                 payload = data.get("payload", {})
                 if control_id and payload.get("call_control_id") == control_id:
                     answered = answered or data.get("event_type") == "call.answered"
-                    hangup = hangup or data.get("event_type") == "call.hangup"
+                    if data.get("event_type") == "call.hangup":
+                        hangup = True
+                        # Telnyx reports who ended the call on the
+                        # signed hangup event (callee/caller/unknown).
+                        source = payload.get("hangup_source")
+                        if isinstance(source, str) and source:
+                            hangup_source = source
         return {"attempt_id": attempt_id, "answered_event": answered,
-                "hangup_event": hangup, "state": attempt["state"]}
+                "hangup_event": hangup, "hangup_source": hangup_source,
+                "state": attempt["state"]}
 
     def reserve_quota(self, name: str, period: str, amount: float,
                       limit: float) -> float:
@@ -800,9 +843,15 @@ class TelnyxAdapter:
         self._bind(conn, row, ids)
         rank = _LIFECYCLE_RANK[event_type]
         if rank > _STATE_RANK[row["state"]]:
+            new_state = _STATE_FROM_EVENT[event_type]
             conn.execute(
                 "UPDATE attempts SET state=? WHERE attempt_id=?",
-                (_STATE_FROM_EVENT[event_type], row["attempt_id"]))
+                (new_state, row["attempt_id"]))
+            if new_state == "hangup":
+                # Terminal: the reservation converts to recorded spend
+                # now; reconcile_bill() records the actual bill into
+                # both fields when it arrives.
+                self._release_job_reservation(conn, row["job_id"])
             return "applied"
         return "nonregressing_event_stored"
 
@@ -842,6 +891,17 @@ class TelnyxAdapter:
                     "UPDATE attempts SET stop=1,"
                     "state=CASE WHEN state='prepared' THEN 'cancelled_before_submit' ELSE state END "
                     "WHERE job_id=?", (resolved_job,))
+            if resolved_job:
+                # A stop that lands before submission is terminal for
+                # the attempt (it can never be claimed): convert the
+                # reservation. A stop on a live attempt changes no
+                # state and releases nothing.
+                cancelled = conn.execute(
+                    "SELECT 1 FROM attempts WHERE job_id=? "
+                    "AND state='cancelled_before_submit' LIMIT 1",
+                    (resolved_job,)).fetchone()
+                if cancelled:
+                    self._release_job_reservation(conn, resolved_job)
             return {"job_id": resolved_job, "attempt_id": attempt_id, "stop": True}
 
     def hangup_command(self, attempt_id: str):
@@ -886,8 +946,9 @@ class TelnyxAdapter:
             job = conn.execute(
                 "SELECT * FROM jobs WHERE job_id=?", (row["job_id"],)).fetchone()
             conn.execute(
-                "UPDATE jobs SET spent_cents=?,bill_ref=?,billing_reconciled=1 WHERE job_id=?",
-                (actual_cents, bill_ref, row["job_id"]))
+                "UPDATE jobs SET spent_cents=?,reserved_cents=?,bill_ref=?,"
+                "billing_reconciled=1 WHERE job_id=?",
+                (actual_cents, actual_cents, bill_ref, row["job_id"]))
             return {"attempt_id": attempt_id, "job_id": row["job_id"],
                     "estimated_cents": job["estimated_cents"], "actual_cents": actual_cents,
                     "overage_cents": max(0, actual_cents - job["estimated_cents"]),
