@@ -29,3 +29,6 @@ backup-pre-merge-2026-10-29/
 return-2026-10-29/
 *.zip
 *.bak
+
+# Deliberate exception: proxy/cert environment only, no secrets (verified).
+!systemd/service-env-fix.env
