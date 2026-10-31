@@ -1,0 +1,486 @@
+{
+  "scope": "SYNTHETIC_SPEECH_REAL_SERVICES_FAKE_PROVIDER_CLIENTS",
+  "mode": "legacy",
+  "playbook": "",
+  "completeness_requested": false,
+  "stt_calls": [
+    {
+      "t": 2.6731,
+      "text": "Goodbye.",
+      "wav_rate": 16000,
+      "channels": 1,
+      "samples": 23168,
+      "pcm_energy": 320510138691,
+      "model": "bench-whisper"
+    },
+    {
+      "t": 7.312955,
+      "text": "Goodbye.",
+      "wav_rate": 16000,
+      "channels": 1,
+      "samples": 23168,
+      "pcm_energy": 320510066114,
+      "model": "bench-whisper"
+    }
+  ],
+  "llm_calls": [
+    {
+      "t": 5.701968,
+      "model": "bench-model",
+      "user_text": "Goodbye.",
+      "reply": "Goodbye."
+    },
+    {
+      "t": 10.353497,
+      "model": "bench-model",
+      "user_text": "Goodbye.",
+      "reply": "Goodbye."
+    }
+  ],
+  "tts_calls": [
+    {
+      "context_id": "728796a0-01bb-4af8-9b5d-5d70a0419e5d",
+      "text": "Goodbye.",
+      "t": 5.734639,
+      "pcm_bytes": 26880
+    },
+    {
+      "context_id": "0d767255-73ca-4b6b-93e9-02da98a96f77",
+      "text": "Goodbye.",
+      "t": 10.375524,
+      "pcm_bytes": 26880
+    }
+  ],
+  "events": [
+    {
+      "event": "bot_start",
+      "t": 0.300308
+    },
+    {
+      "event": "bot_stop",
+      "t": 1.740919
+    },
+    {
+      "event": "VADUserStartedSpeakingFrame",
+      "t": 2.193624,
+      "direction": "DOWNSTREAM"
+    },
+    {
+      "event": "VADUserStoppedSpeakingFrame",
+      "t": 2.673185,
+      "direction": "DOWNSTREAM"
+    },
+    {
+      "event": "transcript_at_tap",
+      "t": 2.709484,
+      "text": "Goodbye.",
+      "finalized": true,
+      "direction": "DOWNSTREAM"
+    },
+    {
+      "event": "llm_context",
+      "t": 5.702154
+    },
+    {
+      "event": "bot_start",
+      "t": 5.7582
+    },
+    {
+      "event": "bot_stop",
+      "t": 6.119287
+    },
+    {
+      "event": "VADUserStartedSpeakingFrame",
+      "t": 6.833506,
+      "direction": "DOWNSTREAM"
+    },
+    {
+      "event": "VADUserStoppedSpeakingFrame",
+      "t": 7.313042,
+      "direction": "DOWNSTREAM"
+    },
+    {
+      "event": "transcript_at_tap",
+      "t": 7.361437,
+      "text": "Goodbye.",
+      "finalized": true,
+      "direction": "DOWNSTREAM"
+    },
+    {
+      "event": "llm_context",
+      "t": 10.353673
+    },
+    {
+      "event": "bot_start",
+      "t": 10.398894
+    },
+    {
+      "event": "bot_stop",
+      "t": 10.759457
+    }
+  ],
+  "wire": [
+    {
+      "event": "media",
+      "t": 0.299965,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.300279,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.341351,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.380837,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.420431,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.461025,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.500597,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.542284,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.581815,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.621508,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.660959,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.701674,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.741363,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.780947,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.820728,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.861455,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.901012,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.94084,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.980494,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.021063,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.060678,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.101238,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.141747,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.181277,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.222984,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.261398,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.30104,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.341646,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.381193,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.42065,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.461231,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.500798,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.541321,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.582084,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.621709,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.662491,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.700977,
+      "bytes": 758
+    },
+    {
+      "event": "clear",
+      "t": 2.196017
+    },
+    {
+      "event": "media",
+      "t": 5.75782,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 5.758098,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 5.79949,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 5.839138,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 5.878714,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 5.919442,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 5.959025,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 5.999656,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 6.039454,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 6.079303,
+      "bytes": 758
+    },
+    {
+      "event": "clear",
+      "t": 6.835856
+    },
+    {
+      "event": "media",
+      "t": 10.398539,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 10.398795,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 10.439509,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 10.480003,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 10.519674,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 10.559164,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 10.599711,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 10.640274,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 10.679896,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 10.719583,
+      "bytes": 758
+    }
+  ],
+  "user_ends": {
+    "first_goodbye": 2.470317,
+    "second_goodbye": 7.111464
+  },
+  "service_classes": {
+    "stt": "pipecat.services.groq.stt.GroqSTTService",
+    "llm": "pipecat.services.google.llm.GoogleLLMService",
+    "tts": "live_pipeline.Service"
+  },
+  "service_mro": {
+    "stt": [
+      "pipecat.services.groq.stt.GroqSTTService",
+      "pipecat.services.whisper.base_stt.BaseWhisperSTTService",
+      "pipecat.services.stt_service.SegmentedSTTService",
+      "pipecat.services.stt_service.STTService",
+      "pipecat.services.ai_service.AIService",
+      "pipecat.processors.frame_processor.FrameProcessor",
+      "pipecat.utils.base_object.BaseObject",
+      "abc.ABC",
+      "builtins.object"
+    ],
+    "llm": [
+      "pipecat.services.google.llm.GoogleLLMService",
+      "pipecat.services.llm_service.LLMService",
+      "pipecat.turns.user_turn_completion_mixin.UserTurnCompletionLLMServiceMixin",
+      "pipecat.services.ai_service.AIService",
+      "pipecat.processors.frame_processor.FrameProcessor",
+      "pipecat.utils.base_object.BaseObject",
+      "abc.ABC",
+      "typing.Generic",
+      "builtins.object"
+    ],
+    "tts": [
+      "live_pipeline.Service",
+      "pipecat.services.elevenlabs.tts.ElevenLabsTTSService",
+      "pipecat.services.elevenlabs.tts_base.ElevenLabsTTSBase",
+      "pipecat.services.tts_service.WebsocketTTSService",
+      "pipecat.services.tts_service.TTSService",
+      "pipecat.services.ai_service.AIService",
+      "pipecat.processors.frame_processor.FrameProcessor",
+      "pipecat.utils.base_object.BaseObject",
+      "pipecat.services.websocket_service.WebsocketService",
+      "abc.ABC",
+      "builtins.object"
+    ]
+  },
+  "effective_turn_policy": {
+    "mode": "legacy"
+  },
+  "activity_callbacks": {
+    "user_started": 2,
+    "user_stopped": 2
+  },
+  "unexpected_stt_calls": 0,
+  "fixture_errors": [],
+  "stt_input_pcm_energy": 641020234067.0,
+  "cleanup_pending_tasks": 0,
+  "provider_network_calls": 0,
+  "carrier_playback_verified": false,
+  "scenario": "reviewed_base_double_goodbye",
+  "runtime_source_sha256": "7e9d160cbcb2d097dc4ea6bb370fe691b951df54908d59c20cd2342f99c9fdfa",
+  "natural_end_before_forced_cleanup": false,
+  "terminal_reason_before_cleanup": null,
+  "session_outcome_after_forced_peer_disconnect": "hangup",
+  "wp02_pipeline_acceptance_passed": false,
+  "baseline_defect_reproduced": true,
+  "socket_guard": {
+    "blocked_attempts": 0
+  }
+}

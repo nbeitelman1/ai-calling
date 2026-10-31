@@ -1,0 +1,67 @@
+{
+  "scope": "WP02_CONTROLLER_CHECKPOINT_NOT_RUNTIME_CLOSING_ACCEPTANCE",
+  "pipecat_version": "1.8.0",
+  "reviewed_base": "ffaf4ccf4450359d3a87728906521316f8e562d4",
+  "branch": "agile/wp-02-closing-state",
+  "runtime_router_construction_lines": [],
+  "runtime_end_frame_sites": [
+    1433,
+    623,
+    543,
+    548
+  ],
+  "runtime_integration_complete": false,
+  "native_default_user_idle_timeout": 0,
+  "native_default_auto_hang_up": true,
+  "native_source_receipts": [
+    {
+      "symbol": "pipecat.processors.aggregators.llm_response_universal.LLMUserAggregatorParams",
+      "signature": "(add_tool_change_messages: bool = False, audio_idle_timeout: float = 1.0, user_turn_strategies: pipecat.turns.user_turn_strategies.UserTurnStrategies | None = None, user_mute_strategies: list[pipecat.turns.user_mute.base_user_mute_strategy.BaseUserMuteStrategy] = <factory>, user_turn_stop_timeout: float = 5.0, user_idle_timeout: float = 0, vad_analyzer: pipecat.audio.vad.vad_analyzer.VADAnalyzer | None = None, filter_incomplete_user_turns: bool = False, user_turn_completion_config: pipecat.turns.user_turn_completion_mixin.UserTurnCompletionConfig | None = None) -> None",
+      "source_file": "/tmp/ai-calling-wp01-venv/lib/python3.12/site-packages/pipecat/processors/aggregators/llm_response_universal.py",
+      "source_sha256": "2fb948911ce194b00c5f06aa32126c03c07454bc6182e1d52b3756512dbda6f3",
+      "source_start_line": 119
+    },
+    {
+      "symbol": "pipecat.processors.aggregators.llm_response_universal.LLMUserAggregator._on_user_turn_idle",
+      "signature": "(self, controller)",
+      "source_file": "/tmp/ai-calling-wp01-venv/lib/python3.12/site-packages/pipecat/processors/aggregators/llm_response_universal.py",
+      "source_sha256": "2fb948911ce194b00c5f06aa32126c03c07454bc6182e1d52b3756512dbda6f3",
+      "source_start_line": 1368
+    },
+    {
+      "symbol": "pipecat.turns.user_idle_controller.UserIdleController",
+      "signature": "(*, user_idle_timeout: float = 0)",
+      "source_file": "/tmp/ai-calling-wp01-venv/lib/python3.12/site-packages/pipecat/turns/user_idle_controller.py",
+      "source_sha256": "1e3222415489760740e183a1b7f2469c581db5bef8a97da7185a56bef9a300f5",
+      "source_start_line": 26
+    },
+    {
+      "symbol": "pipecat.serializers.telnyx.TelnyxFrameSerializer.InputParams",
+      "signature": "(*, ignore_rtvi_messages: bool = True, resampler_clear_after_secs: float | None = 0.2, telnyx_sample_rate: int = 8000, sample_rate: int | None = None, inbound_encoding: str = 'PCMU', outbound_encoding: str = 'PCMU', auto_hang_up: bool = True) -> None",
+      "source_file": "/tmp/ai-calling-wp01-venv/lib/python3.12/site-packages/pipecat/serializers/telnyx.py",
+      "source_sha256": "438d871fe7af90474c56e58743bf50eadd4650df5c5ddb6d45da32c7b394e702",
+      "source_start_line": 49
+    },
+    {
+      "symbol": "pipecat.serializers.telnyx.TelnyxFrameSerializer.serialize",
+      "signature": "(self, frame: pipecat.frames.frames.Frame) -> str | bytes | None",
+      "source_file": "/tmp/ai-calling-wp01-venv/lib/python3.12/site-packages/pipecat/serializers/telnyx.py",
+      "source_sha256": "438d871fe7af90474c56e58743bf50eadd4650df5c5ddb6d45da32c7b394e702",
+      "source_start_line": 127
+    }
+  ],
+  "source_sha256": {
+    "server/live_pipeline.py": "7e9d160cbcb2d097dc4ea6bb370fe691b951df54908d59c20cd2342f99c9fdfa",
+    "server/call_controller.py": "d6e8be1fa458f67de583865f3fd70d2580d9cdfd33a8aee31551c1f113792b05",
+    "server/closing_state.py": "19b81372e5522d810c4be4bfd5571901126e43ef9d4f52722f4f79ec28ae2b85"
+  },
+  "pure_router_microbenchmark": {
+    "n": 5000,
+    "p50_microseconds": 2.073,
+    "p95_nearest_rank_microseconds": 2.174,
+    "max_microseconds": 65.619,
+    "definition": "one synthetic goodbye route; construction excluded; not conversation latency"
+  },
+  "live_calls": 0,
+  "provider_api_calls": 0
+}

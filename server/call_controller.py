@@ -28,6 +28,7 @@ from dataclasses import dataclass, field
 import persona
 import playbooks as playbooks_mod
 from conversation_state import ConversationTracker
+from closing_state import ClosingPhase, ClosingState, is_goodbye_intent
 
 EXTRACTION_PROVENANCE = "post-call extraction (rule-based typer)"
 
@@ -102,7 +103,7 @@ def build_brief(job, store=None, playbook=None) -> CallBrief:
 
 @dataclass(frozen=True)
 class RouteDecision:
-    action: str  # "continue" | "wrap_up"
+    action: str  # "continue" | "wrap_up" | "suppress" | "reopen"
     reason: str = ""
 
 
@@ -116,13 +117,28 @@ class TurnRouter:
     def __init__(self, brief: CallBrief, tracker: ConversationTracker):
         self.brief = brief
         self.tracker = tracker
+        self.closing = ClosingState()
 
     def after_user_turn(self, user_text: str) -> RouteDecision:
+        # CLOSING acknowledgements never trigger inference or mutate progress.
+        # A genuine first interjection reopens before objective re-evaluation;
+        # otherwise previously filled slots would immediately close it again.
+        if self.closing.phase != ClosingPhase.OPEN:
+            action = self.closing.on_user_text(user_text)
+            if action == "reopen":
+                self.tracker.observe_user(user_text)
+            return RouteDecision(action, self.closing.reason)
+        if not (user_text or "").strip():
+            return RouteDecision("continue")
         self.tracker.observe_user(user_text)
+        if is_goodbye_intent(user_text):
+            self.closing.request_close("caller_goodbye")
+            return RouteDecision("wrap_up", "caller_goodbye")
         playbook = self.brief.playbook
         if playbook:
             slots = {item["slot"] for item in playbook["collect"]}
             if slots and slots <= self.tracker.slots_filled:
+                self.closing.request_close("objective_complete")
                 return RouteDecision(
                     "wrap_up", "all playbook items collected")
         return RouteDecision("continue")

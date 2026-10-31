@@ -1,0 +1,489 @@
+{
+  "scope": "SYNTHETIC_SPEECH_REAL_SERVICES_FAKE_PROVIDER_CLIENTS",
+  "mode": "legacy",
+  "playbook": "",
+  "completeness_requested": false,
+  "stt_calls": [
+    {
+      "t": 3.33476,
+      "text": "Thank you, goodbye.",
+      "wav_rate": 16000,
+      "channels": 1,
+      "samples": 21120,
+      "pcm_energy": 531281914599,
+      "model": "bench-whisper"
+    },
+    {
+      "t": 4.935421,
+      "text": "Goodbye again.",
+      "wav_rate": 16000,
+      "channels": 1,
+      "samples": 20096,
+      "pcm_energy": 434429101610,
+      "model": "bench-whisper"
+    },
+    {
+      "t": 5.613962,
+      "text": "",
+      "wav_rate": 16000,
+      "channels": 1,
+      "samples": 9216,
+      "pcm_energy": 215443606150,
+      "model": "bench-whisper"
+    }
+  ],
+  "llm_calls": [
+    {
+      "t": 3.423978,
+      "model": "bench-model",
+      "user_text": "Thank you, goodbye.",
+      "reply": "Goodbye."
+    },
+    {
+      "t": 4.99891,
+      "model": "bench-model",
+      "user_text": "Goodbye again.",
+      "reply": "Goodbye."
+    }
+  ],
+  "tts_calls": [
+    {
+      "context_id": "7cb252dc-6d2e-4109-bfb8-c2f157f28875",
+      "text": "Goodbye.",
+      "t": 3.46235,
+      "pcm_bytes": 26880
+    },
+    {
+      "context_id": "341ae239-f067-41ea-b0b6-472168a16104",
+      "text": "Goodbye.",
+      "t": 5.022746,
+      "pcm_bytes": 26880
+    }
+  ],
+  "events": [
+    {
+      "event": "bot_start",
+      "t": 0.301675
+    },
+    {
+      "event": "bot_stop",
+      "t": 1.742604
+    },
+    {
+      "event": "VADUserStartedSpeakingFrame",
+      "t": 2.955321,
+      "direction": "DOWNSTREAM"
+    },
+    {
+      "event": "VADUserStoppedSpeakingFrame",
+      "t": 3.334839,
+      "direction": "DOWNSTREAM"
+    },
+    {
+      "event": "transcript_at_tap",
+      "t": 3.378841,
+      "text": "Thank you, goodbye.",
+      "finalized": true,
+      "direction": "DOWNSTREAM"
+    },
+    {
+      "event": "llm_context",
+      "t": 3.424119
+    },
+    {
+      "event": "bot_start",
+      "t": 3.486504
+    },
+    {
+      "event": "bot_stop",
+      "t": 3.848048
+    },
+    {
+      "event": "VADUserStartedSpeakingFrame",
+      "t": 4.753799,
+      "direction": "DOWNSTREAM"
+    },
+    {
+      "event": "VADUserStoppedSpeakingFrame",
+      "t": 4.935507,
+      "direction": "DOWNSTREAM"
+    },
+    {
+      "event": "transcript_at_tap",
+      "t": 4.977757,
+      "text": "Goodbye again.",
+      "finalized": true,
+      "direction": "DOWNSTREAM"
+    },
+    {
+      "event": "llm_context",
+      "t": 4.999023
+    },
+    {
+      "event": "bot_start",
+      "t": 5.047903
+    },
+    {
+      "event": "VADUserStartedSpeakingFrame",
+      "t": 5.23368,
+      "direction": "DOWNSTREAM"
+    },
+    {
+      "event": "bot_stop",
+      "t": 5.236427
+    },
+    {
+      "event": "VADUserStoppedSpeakingFrame",
+      "t": 5.61405,
+      "direction": "DOWNSTREAM"
+    }
+  ],
+  "wire": [
+    {
+      "event": "media",
+      "t": 0.301336,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.301645,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.343003,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.382552,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.42216,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.462875,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.502299,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.543978,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.582434,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.621996,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.662671,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.702368,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.741974,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.782544,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.822166,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.862819,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.902279,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.942797,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 0.982425,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.02406,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.062629,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.10229,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.142967,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.182394,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.221934,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.26276,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.302229,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.342818,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.382469,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.423107,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.462773,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.502348,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.542843,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.582559,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.622319,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.664119,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 1.702624,
+      "bytes": 758
+    },
+    {
+      "event": "clear",
+      "t": 2.95768
+    },
+    {
+      "event": "media",
+      "t": 3.486116,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 3.486387,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 3.526813,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 3.567368,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 3.606919,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 3.646624,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 3.687235,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 3.726852,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 3.768639,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 3.807138,
+      "bytes": 758
+    },
+    {
+      "event": "clear",
+      "t": 4.756849
+    },
+    {
+      "event": "media",
+      "t": 5.047429,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 5.047784,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 5.089498,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 5.12903,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 5.169661,
+      "bytes": 758
+    },
+    {
+      "event": "media",
+      "t": 5.209228,
+      "bytes": 758
+    },
+    {
+      "event": "clear",
+      "t": 5.236126
+    }
+  ],
+  "user_ends": {
+    "first_goodbye": 3.132224,
+    "second_goodbye": 5.472344
+  },
+  "service_classes": {
+    "stt": "pipecat.services.groq.stt.GroqSTTService",
+    "llm": "pipecat.services.google.llm.GoogleLLMService",
+    "tts": "live_pipeline.Service"
+  },
+  "service_mro": {
+    "stt": [
+      "pipecat.services.groq.stt.GroqSTTService",
+      "pipecat.services.whisper.base_stt.BaseWhisperSTTService",
+      "pipecat.services.stt_service.SegmentedSTTService",
+      "pipecat.services.stt_service.STTService",
+      "pipecat.services.ai_service.AIService",
+      "pipecat.processors.frame_processor.FrameProcessor",
+      "pipecat.utils.base_object.BaseObject",
+      "abc.ABC",
+      "builtins.object"
+    ],
+    "llm": [
+      "pipecat.services.google.llm.GoogleLLMService",
+      "pipecat.services.llm_service.LLMService",
+      "pipecat.turns.user_turn_completion_mixin.UserTurnCompletionLLMServiceMixin",
+      "pipecat.services.ai_service.AIService",
+      "pipecat.processors.frame_processor.FrameProcessor",
+      "pipecat.utils.base_object.BaseObject",
+      "abc.ABC",
+      "typing.Generic",
+      "builtins.object"
+    ],
+    "tts": [
+      "live_pipeline.Service",
+      "pipecat.services.elevenlabs.tts.ElevenLabsTTSService",
+      "pipecat.services.elevenlabs.tts_base.ElevenLabsTTSBase",
+      "pipecat.services.tts_service.WebsocketTTSService",
+      "pipecat.services.tts_service.TTSService",
+      "pipecat.services.ai_service.AIService",
+      "pipecat.processors.frame_processor.FrameProcessor",
+      "pipecat.utils.base_object.BaseObject",
+      "pipecat.services.websocket_service.WebsocketService",
+      "abc.ABC",
+      "builtins.object"
+    ]
+  },
+  "effective_turn_policy": {
+    "mode": "legacy"
+  },
+  "activity_callbacks": {
+    "user_started": 3,
+    "user_stopped": 3
+  },
+  "unexpected_stt_calls": 1,
+  "fixture_errors": [],
+  "stt_input_pcm_energy": 1299743382463.0,
+  "cleanup_pending_tasks": 0,
+  "provider_network_calls": 0,
+  "carrier_playback_verified": false,
+  "scenario": "reviewed_base_double_goodbye",
+  "runtime_source_sha256": "7e9d160cbcb2d097dc4ea6bb370fe691b951df54908d59c20cd2342f99c9fdfa",
+  "natural_end_before_forced_cleanup": false,
+  "terminal_reason_before_cleanup": null,
+  "session_outcome_after_forced_peer_disconnect": "hangup",
+  "wp02_pipeline_acceptance_passed": false,
+  "baseline_defect_reproduced": true,
+  "socket_guard": {
+    "blocked_attempts": 0
+  }
+}

@@ -1,0 +1,142 @@
+{
+  "scope": "SYNTHETIC_LOCAL_SPEECH_NOT_RECORDED_CALLEE_AUDIO",
+  "generator": "ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers",
+  "voice": "Flite slt",
+  "files": [
+    {
+      "file": "disclosure.wav",
+      "text": "Hi, this is Nathan's assistant calling on his behalf.",
+      "filter": null,
+      "sample_rate": 16000,
+      "samples": 53760,
+      "seconds": 3.36,
+      "sha256": "464e342ff1a039e7d985b1beb28518a2a2ad02bb1dcf166c31c7ca8595594985"
+    },
+    {
+      "file": "hello.wav",
+      "text": "Hello there I can hear you.",
+      "filter": null,
+      "sample_rate": 8000,
+      "samples": 13560,
+      "seconds": 1.695,
+      "sha256": "e39d9048dd1a39bc488e443d6c2196fea9d4cc46febed6cedbcba91e911877fd"
+    },
+    {
+      "file": "yeah.wav",
+      "text": "Yeah.",
+      "filter": "atempo=0.75",
+      "sample_rate": 8000,
+      "samples": 7743,
+      "seconds": 0.967875,
+      "sha256": "ac39777d3a705f4f4d6bc11c5043c51aa8064934479844cab35d2fd9bc65b4d6"
+    },
+    {
+      "file": "interject.wav",
+      "text": "Please wait.",
+      "filter": null,
+      "sample_rate": 8000,
+      "samples": 8880,
+      "seconds": 1.11,
+      "sha256": "5dcf466b5fca409fde4f38bebee76fba49db4295b81f829614d2ca59dfec1df8"
+    },
+    {
+      "file": "tuesday.wav",
+      "text": "I can do Tuesday.",
+      "filter": "atempo=0.65",
+      "sample_rate": 8000,
+      "samples": 17583,
+      "seconds": 2.197875,
+      "sha256": "936ae98ed66bb0c13a1c09e7864e62c550b8f8c96259d9f344ead88ba68de17f"
+    },
+    {
+      "file": "tuesday_unmodified.wav",
+      "text": "I can do Tuesday.",
+      "filter": null,
+      "sample_rate": 8000,
+      "samples": 11640,
+      "seconds": 1.455,
+      "sha256": "77c494958019063279d3680ecc41c4ee2c44085878e93c69cd7ca222c0894ca4"
+    },
+    {
+      "file": "thursday.wav",
+      "text": "No wait Thursday afternoon.",
+      "filter": null,
+      "sample_rate": 8000,
+      "samples": 15000,
+      "seconds": 1.875,
+      "sha256": "0406710b806d29e225ca30149b36c995786aadb98f1f6541d0a4ba446308ffcd"
+    },
+    {
+      "file": "reply.wav",
+      "text": "I can help with that and will check the options for you.",
+      "filter": null,
+      "sample_rate": 16000,
+      "samples": 50400,
+      "seconds": 3.15,
+      "sha256": "6577cd72592c2af4c904b91cfdcd4707264700b7fde006d0303731c17241fc58"
+    },
+    {
+      "file": "thursday_reply.wav",
+      "text": "Thursday afternoon.",
+      "filter": null,
+      "sample_rate": 16000,
+      "samples": 25200,
+      "seconds": 1.575,
+      "sha256": "8873d6106724a5ae1e9c0fba4ef55053ce8190bf7e493f298ed9908a6f52ac70"
+    },
+    {
+      "file": "tuesday_reply.wav",
+      "text": "Tuesday.",
+      "filter": null,
+      "sample_rate": 16000,
+      "samples": 14000,
+      "seconds": 0.875,
+      "sha256": "bb6e9104a814cf7ec651bc08ffe5286a053c5d40b038cc1eb1c47621aa92537c"
+    },
+    {
+      "file": "idle_prompt.wav",
+      "text": "Are you still there?",
+      "filter": null,
+      "sample_rate": 16000,
+      "samples": 22160,
+      "seconds": 1.385,
+      "sha256": "1331640ac97960a14e562ff1e91a14208fed2306b4f71542a1fe6b81f8b323ef"
+    },
+    {
+      "file": "goodbye.wav",
+      "text": "Goodbye.",
+      "filter": "atempo=0.75",
+      "sample_rate": 8000,
+      "samples": 8744,
+      "seconds": 1.093,
+      "sha256": "ecce300fd8acf94798f39abfb9a2e00386b39d36716d93467f9e2e8f0fa3b14f"
+    },
+    {
+      "file": "goodbye_reply.wav",
+      "text": "Goodbye.",
+      "filter": null,
+      "sample_rate": 16000,
+      "samples": 13440,
+      "seconds": 0.84,
+      "sha256": "c7f4a8da00df66f68e9c605a191318c9012ab1d7a42b039fa21b084373602b18"
+    },
+    {
+      "file": "closing_line.wav",
+      "text": "Thank you for your time. Goodbye.",
+      "filter": null,
+      "sample_rate": 16000,
+      "samples": 34960,
+      "seconds": 2.185,
+      "sha256": "640fb28aa785fbe16bde01e412f1dc85ef6eb24ffa1a0178a6a074422c9824c6"
+    },
+    {
+      "file": "real_question.wav",
+      "text": "Wait, what time are you open?",
+      "filter": null,
+      "sample_rate": 8000,
+      "samples": 17240,
+      "seconds": 2.155,
+      "sha256": "9abb6213bb005e74ef730db6812d9e18aca8ec9c815320a967d509417f872472"
+    }
+  ]
+}

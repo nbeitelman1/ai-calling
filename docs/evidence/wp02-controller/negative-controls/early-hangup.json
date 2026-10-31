@@ -1,0 +1,131 @@
+{
+  "scope": "OFFLINE_APPLICATION_TESTS_NOT_LIVE_CARRIER",
+  "root": "/tmp/wp02-control-yvd_p5ql/repo",
+  "tests_run": 28,
+  "passed": false,
+  "failures": 3,
+  "errors": 0,
+  "skipped": 0,
+  "seconds": 0.024850383000739384,
+  "socket_guard": {
+    "loopback_connects": 0,
+    "blocked_external_connects": 0
+  },
+  "tests": [
+    {
+      "test": "test_closing_state.TestClosingRouter.test_caller_goodbye_starts_closing_without_model",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingRouter.test_closing_acknowledgements_do_not_change_slot_or_question_state",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingRouter.test_empty_input_does_not_mark_questions_answered",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingRouter.test_negated_or_quoted_goodbye_does_not_end_a_call",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingRouter.test_objective_complete_is_an_explicit_closing_transition",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingRouter.test_question_reopens_once_and_does_not_immediately_reclose_filled_slots",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingRouter.test_thanks_alone_does_not_end_an_open_conversation",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingState.test_acknowledgements_never_cancel_closing",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingState.test_bounded_event_interleavings_preserve_effect_limits",
+      "status": "FAIL",
+      "detail": "Traceback (most recent call last):\n  File \"/tmp/wp02-control-yvd_p5ql/repo/tests/test_closing_state.py\", line 227, in test_bounded_event_interleavings_preserve_effect_limits\n    self.assertTrue(before['playback_complete'], trace)\nAssertionError: False is not true : ('line', 'line', 'line', 'hangup')\n"
+    },
+    {
+      "test": "test_closing_state.TestClosingState.test_clear_or_interruption_is_not_playback_completion",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingState.test_duplicate_callbacks_do_not_rearm",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingState.test_duplicate_triggers_claim_exactly_one_line",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingState.test_forced_teardown_records_failure_not_completed_audio",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingState.test_generation_alone_cannot_arm_hangup",
+      "status": "FAIL",
+      "detail": "Traceback (most recent call last):\n  File \"/tmp/wp02-control-yvd_p5ql/repo/tests/test_closing_state.py\", line 99, in test_generation_alone_cannot_arm_hangup\n    self.assertFalse(s.claim_hangup(line.token))\nAssertionError: True is not false\n"
+    },
+    {
+      "test": "test_closing_state.TestClosingState.test_handback_is_verbatim_and_not_reopened",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingState.test_hard_caps_are_not_extended_by_interjections",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingState.test_initial_state_has_no_line_or_hangup",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingState.test_mandatory_reason_upgrades_a_second_final_closing",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingState.test_mandatory_trigger_supersedes_pending_reversible_close_without_second_line",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingState.test_no_network_or_model_imports_in_state_machine",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingState.test_one_real_interjection_invalidates_pending_hangup",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingState.test_playback_must_be_claimed_before_start",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingState.test_reason_preserved_after_hangup_and_no_new_closing",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingState.test_second_closing_cannot_reopen",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingState.test_stale_stop_cannot_complete_new_closing",
+      "status": "FAIL",
+      "detail": "Traceback (most recent call last):\n  File \"/tmp/wp02-control-yvd_p5ql/repo/tests/test_closing_state.py\", line 150, in test_stale_stop_cannot_complete_new_closing\n    self.assertFalse(s.claim_hangup(current.token))\nAssertionError: True is not false\n"
+    },
+    {
+      "test": "test_closing_state.TestClosingState.test_stop_after_matching_start_allows_exactly_one_hangup",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingState.test_substantive_correction_is_not_a_mere_acknowledgement",
+      "status": "PASS"
+    },
+    {
+      "test": "test_closing_state.TestClosingState.test_unknown_reason_fails_loudly_in_configuration",
+      "status": "PASS"
+    }
+  ]
+}

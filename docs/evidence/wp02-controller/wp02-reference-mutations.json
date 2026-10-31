@@ -1,0 +1,21 @@
+{
+  "scope": "DELIBERATE_REFERENCE_MUTATIONS",
+  "cases": [
+    {
+      "broken_control": "verify",
+      "test": "test_invalid_signature_never_queued",
+      "caught": true
+    },
+    {
+      "broken_control": "claim_submission",
+      "test": "test_claim_is_single_use",
+      "caught": true
+    },
+    {
+      "broken_control": "apply",
+      "test": "test_out_of_order_terminal_does_not_reopen",
+      "caught": true
+    }
+  ],
+  "all_caught": true
+}
