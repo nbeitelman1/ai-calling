@@ -230,3 +230,32 @@ blind spot is what let this ship.) Suite: **250/250** candidate,
 reference **57/57**, mutations **3/3 caught**, manifest verified.
 No live call was placed for this fix; a retest needs Nathan's
 fresh per-call approval.
+
+## Addendum — Improvement research + A-GILE plan (Oct 30, 2026, late evening)
+
+A deep-research pass on improving this stack (Pipecat / Telnyx /
+Groq Whisper / Gemini / ElevenLabs / SQLite memory) is committed
+at `docs/RESEARCH_IMPROVEMENTS_2026-10-31.md` (17 ranked
+recommendations; one citation URL corrected per the researcher's
+errata). Its open question is resolved here: **the deployed
+Pipecat is `pipecat-ai` 1.8.0** (Python 3.12.3; google-genai
+2.34.0; groq 1.7.0) — 1.x, but behind the newest docs, so
+≥1.9-only features (EagerUserTurnStopStrategy + SpeculationGate)
+are out of scope until a separate upgrade decision.
+
+The research is converted into a complete, handoff-ready work
+order for A-GILE at `docs/AGILE_IMPROVEMENT_PLAN.md`: 13 work
+packages in execution order (turn-stack config, CLOSING state
+machine, observers, Telnyx AMD/recording code, context hygiene,
+TTS clips/tuning, eval harness, cross-provider failover +
+deadline + circuit breaker, LLM extraction + AUDN + review
+queue, commitment ledger, sqlite-vec semantic layer, and two
+gated benchmark experiments — Deepgram STT and TTS challengers),
+under hard ground rules: no live calls, tests fake at the
+provider-client layer, no deployment, no merging, `main`
+untouched. Headline research verdicts the plan encodes: keep
+SQLite (steal Graphiti/mem0 patterns instead), Groq Whisper's
+batch STT is the latency bottleneck worth benchmarking against,
+and a Gemini-only failover chain does not survive a Google-wide
+outage — WP-8 adds the cross-provider leg the Oct 30, 5:04pm
+failure argued for.
