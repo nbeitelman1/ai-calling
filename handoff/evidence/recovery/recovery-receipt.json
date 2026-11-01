@@ -1,0 +1,10 @@
+{
+  "recovered_commit": "f11207098baa6dd9429f8675068a9ec0d607fc32",
+  "archive_sha256": "a9c7f8f177c6c6ee79c963a9e57fc8df0b167e10fd0d21004794acd51317cd44",
+  "archive_manifest_entries_verified": 36,
+  "source_hashes_verified": 3,
+  "durable_worktree": "/workspace/tool_results/ai-calling-wp02",
+  "runtime_snapshot_recovered": false,
+  "historical_runtime_tests": 308,
+  "historical_result_applies_to_restored_tree": false
+}

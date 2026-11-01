@@ -1,0 +1,8 @@
+{
+  "status": "PASS",
+  "scope": "GIT_BUNDLE_DECODED_BLOB_PATTERN_SCAN_NOT_EXHAUSTIVE_DLP",
+  "unique_bundles": 3,
+  "git_objects_read": 462,
+  "blobs_scanned": 328,
+  "findings": []
+}

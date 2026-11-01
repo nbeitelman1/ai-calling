@@ -1,3 +1,5 @@
+> **New-chat handoff:** This branch preserves the verified WP-2 controller baseline, separate WP-1 checkpoint, original Markdown inputs, and incomplete recovery fragments. Start with [START_HERE_NEW_CHAT.md](START_HERE_NEW_CHAT.md). **It is not a completed 13-package release or a deployment.**
+
 # AI Calling — Nathan's self-hosted AI phone assistant
 
 A self-hosted system that places real phone calls and holds a two-way

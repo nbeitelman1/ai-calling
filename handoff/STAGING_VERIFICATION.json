@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "staged_files": 51,
+  "promised_artifacts_staged": 42,
+  "original_markdown_documents": 12,
+  "main_markdown_bytes": 79860,
+  "application_code_modified_by_handoff": false,
+  "publication_scope": "one separate handoff branch; no main/review merge",
+  "historical_tests_not_relabelled_as_fresh": true
+}

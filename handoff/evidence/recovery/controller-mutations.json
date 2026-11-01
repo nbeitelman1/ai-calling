@@ -1,0 +1,64 @@
+{
+  "scope": "PURE_CONTROLLER_NEGATIVE_CONTROLS_NOT_MEDIA_ACCEPTANCE",
+  "cases": [
+    {
+      "control": "ack-reopens",
+      "intended_test": "test_acknowledgements_never_cancel_closing",
+      "caught": true,
+      "intended_assertion_failure_seen": true,
+      "harness_errors": 0,
+      "working_source_unchanged": true,
+      "seconds": 0.7815655800000059
+    },
+    {
+      "control": "clear-is-stop",
+      "intended_test": "test_clear_or_interruption_is_not_playback_completion",
+      "caught": true,
+      "intended_assertion_failure_seen": true,
+      "harness_errors": 0,
+      "working_source_unchanged": true,
+      "seconds": 0.736532794000027
+    },
+    {
+      "control": "duplicate-line",
+      "intended_test": "test_duplicate_triggers_claim_exactly_one_line",
+      "caught": true,
+      "intended_assertion_failure_seen": true,
+      "harness_errors": 0,
+      "working_source_unchanged": true,
+      "seconds": 0.7821832040000345
+    },
+    {
+      "control": "early-hangup",
+      "intended_test": "test_generation_alone_cannot_arm_hangup",
+      "caught": true,
+      "intended_assertion_failure_seen": true,
+      "harness_errors": 0,
+      "working_source_unchanged": true,
+      "seconds": 0.7977134669999941
+    },
+    {
+      "control": "second-reopen",
+      "intended_test": "test_second_closing_cannot_reopen",
+      "caught": true,
+      "intended_assertion_failure_seen": true,
+      "harness_errors": 0,
+      "working_source_unchanged": true,
+      "seconds": 0.8885905340000022
+    },
+    {
+      "control": "stale-generation",
+      "intended_test": "test_stale_stop_cannot_complete_new_closing",
+      "caught": true,
+      "intended_assertion_failure_seen": true,
+      "harness_errors": 0,
+      "working_source_unchanged": true,
+      "seconds": 0.7738489990000517
+    }
+  ],
+  "all_caught": true,
+  "wall_seconds": 1.6271484520000286,
+  "worker_seconds": 4.760434578000115,
+  "parallelism_multiple": 2.9256301551027946,
+  "source_sha256": "19b81372e5522d810c4be4bfd5571901126e43ef9d4f52722f4f79ec28ae2b85"
+}

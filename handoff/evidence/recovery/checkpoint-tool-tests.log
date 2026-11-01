@@ -1,0 +1,14 @@
+test_clean_snapshot_has_clonable_history_and_verified_files (__main__.TestCheckpoint.test_clean_snapshot_has_clonable_history_and_verified_files) ... ok
+test_deleted_file_is_recorded (__main__.TestCheckpoint.test_deleted_file_is_recorded) ... ok
+test_dirty_contents_are_preserved_not_just_head (__main__.TestCheckpoint.test_dirty_contents_are_preserved_not_just_head) ... ok
+test_existing_checkpoint_is_not_overwritten (__main__.TestCheckpoint.test_existing_checkpoint_is_not_overwritten) ... ok
+test_hash_tampering_is_detected (__main__.TestCheckpoint.test_hash_tampering_is_detected) ... ok
+test_mid_capture_change_is_detected (__main__.TestCheckpoint.test_mid_capture_change_is_detected) ... ok
+test_secret_like_content_is_refused_without_publishing (__main__.TestCheckpoint.test_secret_like_content_is_refused_without_publishing) ... ok
+test_symlink_and_parent_traversal_are_rejected (__main__.TestCheckpoint.test_symlink_and_parent_traversal_are_rejected) ... ok
+test_untracked_source_requires_explicit_inclusion (__main__.TestCheckpoint.test_untracked_source_requires_explicit_inclusion) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.771s
+
+OK

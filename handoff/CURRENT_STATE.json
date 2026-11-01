@@ -1,0 +1,46 @@
+{
+  "schema": "ai-calling-public-handoff/v1",
+  "date": "2026-10-31",
+  "repository": "https://github.com/nbeitelman1/ai-calling",
+  "branch": "handoff/ai-calling-new-chat-2026-10-31",
+  "purpose": "public new-chat preservation; no deployment or merge",
+  "application_root_source_commit": "f11207098baa6dd9429f8675068a9ec0d607fc32",
+  "reviewed_work_order_base": "ffaf4ccf4450359d3a87728906521316f8e562d4",
+  "entrypoint": "START_HERE_NEW_CHAT.md",
+  "original_markdown_count": 12,
+  "wp01": {
+    "status": "saved_offline_verified_pending_review",
+    "commit": "f65fa8e0bf2d7fcff3a38437006e4d86d2ebbd38",
+    "application_tests": 281,
+    "checkpoint": "handoff/checkpoints/ai-calling-wp01-f65fa8e-checkpoint.zip",
+    "report": "handoff/reports/AI-Calling-WP01-Report.md"
+  },
+  "wp02": {
+    "status": "controller_verified_runtime_partially_recovered",
+    "runnable_baseline_tests": 285,
+    "exact_recovered_later_files": 8,
+    "recovered_source": "handoff/wp02-recovered-source",
+    "missing": [
+      "server/closing_runtime.py",
+      "tests/test_closing_media.py",
+      "generated runtime fixtures and detailed final runtime receipts"
+    ],
+    "historical_runtime_tests": 308,
+    "historical_runtime_pass_does_not_certify_current_tree": true,
+    "report": "handoff/reports/AI-Calling-WP02-Recovery-Report.md"
+  },
+  "wp03_to_wp13": "not implemented in this work sequence",
+  "next_action": "Rebuild missing WP2 runtime and media tests, integrate recovered files, validate, checkpoint; then proceed in work-order sequence.",
+  "approval_boundaries": [
+    "no live calls",
+    "no deployment",
+    "no merges",
+    "no live database changes",
+    "no live carrier feature enablement"
+  ],
+  "publication": {
+    "repository_public_before_push": true,
+    "main_before_push": "f1554840907e85c3fa03df502517716bd478d980",
+    "this_file_is_not_a_push_success_receipt": true
+  }
+}

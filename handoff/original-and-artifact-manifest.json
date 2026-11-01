@@ -1,0 +1,300 @@
+{
+  "original_markdown_documents": 12,
+  "artifacts": [
+    {
+      "path": "handoff/original-inputs/A-GILE improvement plan.md",
+      "source": "Uploaded Markdown, v1",
+      "sha256": "dc49e2e0b9953c82cc63cdead0b1cb0b6248b73c22b8573f67cb029ba9fab14d",
+      "bytes": 50167,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/original-inputs/debug-handoff/00-START-HERE.md",
+      "source": "Uploaded ai-calling-debug-handoff.zip: ai-calling-debug-handoff/00-START-HERE.md",
+      "sha256": "df3affc8fd30d71193f46b0c84fccbb7e2ec8d8d89c06187121e57c80e9f0a4c",
+      "bytes": 2770,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/original-inputs/debug-handoff/01-PROBLEM-TIMELINE.md",
+      "source": "Uploaded ai-calling-debug-handoff.zip: ai-calling-debug-handoff/01-PROBLEM-TIMELINE.md",
+      "sha256": "a765fca25e0c4f90689aa65acbb11be6998bd7daff9f9d7f4e4bfbb620668fe3",
+      "bytes": 3303,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/original-inputs/debug-handoff/03-ENVIRONMENT-AND-DEPLOY.md",
+      "source": "Uploaded ai-calling-debug-handoff.zip: ai-calling-debug-handoff/03-ENVIRONMENT-AND-DEPLOY.md",
+      "sha256": "af9fb227e5e2e2906c548dcee282a13afe5ea4db68e8d4c43599b96367969adc",
+      "bytes": 2942,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/original-inputs/debug-handoff/07-EVIDENCE.md",
+      "source": "Uploaded ai-calling-debug-handoff.zip: ai-calling-debug-handoff/07-EVIDENCE.md",
+      "sha256": "9994441697e4a3a81fdfbced0fa3345c700029136c36667d152e38bdd8ef28e7",
+      "bytes": 2840,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/original-inputs/debug-handoff/08-SUSPECTS-AND-OPEN-QUESTIONS.md",
+      "source": "Uploaded ai-calling-debug-handoff.zip: ai-calling-debug-handoff/08-SUSPECTS-AND-OPEN-QUESTIONS.md",
+      "sha256": "6cce291e970687960f1a1687afdb638cc690aedff403157f2268841b6b8a4465",
+      "bytes": 3007,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/original-inputs/debug-handoff/02-ARCHITECTURE.md",
+      "source": "Uploaded ai-calling-debug-handoff.zip: ai-calling-debug-handoff/02-ARCHITECTURE.md",
+      "sha256": "3a4f5b466a510cae32ce796aa57f3997f4d6c867dddfac136ab0ae8fc63eec51",
+      "bytes": 18855,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/original-inputs/debug-handoff/09-FULL-PROJECT-STATE.md",
+      "source": "Uploaded ai-calling-debug-handoff.zip: ai-calling-debug-handoff/09-FULL-PROJECT-STATE.md",
+      "sha256": "8213c428433821f3ce7794919b12f9c643fb369a2bde4a503eabe06c93ddb4d4",
+      "bytes": 80144,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/original-inputs/debug-handoff/04-SOURCE-live_pipeline.py.md",
+      "source": "Uploaded ai-calling-debug-handoff.zip: ai-calling-debug-handoff/04-SOURCE-live_pipeline.py.md",
+      "sha256": "1945891c3f10e28bf135e4618c7447875b50ccfada56f11647d6f477baae8a0b",
+      "bytes": 67499,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/original-inputs/debug-handoff/05-SOURCE-live_server.py.md",
+      "source": "Uploaded ai-calling-debug-handoff.zip: ai-calling-debug-handoff/05-SOURCE-live_server.py.md",
+      "sha256": "974ed628695030f066f8b84b4d5f6d52c701b5594269a89af5a3e0a4555c2763",
+      "bytes": 14567,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/original-inputs/debug-handoff/06a-SOURCE-telnyx_media.py.md",
+      "source": "Uploaded ai-calling-debug-handoff.zip: ai-calling-debug-handoff/06a-SOURCE-telnyx_media.py.md",
+      "sha256": "aceb33b43e3d9fe2e88ad43a25220c57beb2cf578b741fbc9154656782c78a02",
+      "bytes": 11677,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/original-inputs/debug-handoff/06b-SOURCE-telnyx_adapter-and-support.md",
+      "source": "Uploaded ai-calling-debug-handoff.zip: ai-calling-debug-handoff/06b-SOURCE-telnyx_adapter-and-support.md",
+      "sha256": "2ea0a1b5a8fcb8c850847f6318e77b86b83cc0405b347c39de0b080f6fa53256",
+      "bytes": 59970,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/reports/AI-Calling-WP01-Report.md",
+      "source": "Previously delivered report; historical status retained",
+      "sha256": "d1dce7869249a7ed7946640ef1f72571e413593f398da2f4cba0c69f2a20ff1e",
+      "bytes": 17441,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/reports/AI-Calling-WP02-Progress-Report.md",
+      "source": "Previously delivered report; historical status retained",
+      "sha256": "2b343f40d066e93f75aa4dce665a8c6f74eff4ce9f02698e021c70fcff6fc893",
+      "bytes": 15033,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/reports/AI-Calling-WP02-Recovery-Report.md",
+      "source": "Previously delivered report; historical status retained",
+      "sha256": "5bbaf0f16d9842d8fb4a0fdfe24d2ab9cfee1a5f8943923b8e4ebe4a7a1509de",
+      "bytes": 8320,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/reports/AI_Calling_Debugging_Report.md",
+      "source": "Previously delivered report; historical status retained",
+      "sha256": "cfaeb640b0f785b2d92235b5a558d8017ecdcf48dccb9498babc3f8c9426b70f",
+      "bytes": 14720,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/reports/MUSE_TEST_HANDOFF.md",
+      "source": "Previously delivered report; historical status retained",
+      "sha256": "ef6ec3eedca55361802f7960e904412ed05ea706f9fc827d2752bdea12d9e19f",
+      "bytes": 13429,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/checkpoints/ai-calling-wp01-f65fa8e-checkpoint.zip",
+      "source": "Verified prior checkpoint; not an authentication export",
+      "sha256": "0ec58e9fb1c7e2dec75feab1a2ee013846a3d0ac0ce66bed5bb7ef65226ff46d",
+      "bytes": 3130952,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/checkpoints/ai-calling-wp02-f112070-checkpoint.zip",
+      "source": "Verified prior checkpoint; not an authentication export",
+      "sha256": "a9c7f8f177c6c6ee79c963a9e57fc8df0b167e10fd0d21004794acd51317cd44",
+      "bytes": 2592154,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/checkpoints/AI-Calling-WP02-Recovery.zip",
+      "source": "Verified prior checkpoint; not an authentication export",
+      "sha256": "df3716dfd086f333493ac19446ecc6ac3026dd8aff6bf1ad39d31626cfcd9fff",
+      "bytes": 2603216,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/wp02-recovered-source/server/closing_state.py",
+      "source": "Exact recovered fragment; incomplete, not installed at application root",
+      "sha256": "4efc26923afbf87a917bf04af0753e3d12d904529045cebb5d446389a1c6994b",
+      "bytes": 7240,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/wp02-recovered-source/server/live_pipeline.py",
+      "source": "Exact recovered fragment; incomplete, not installed at application root",
+      "sha256": "c72f30377e0d16cc4dcd3bde2cf8762afe215869bd6170142861086dea8fd51d",
+      "bytes": 89908,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/wp02-recovered-source/server/live_server.py",
+      "source": "Exact recovered fragment; incomplete, not installed at application root",
+      "sha256": "f66124301edea9c5e3e6aae73c4f7bd17669b285f494a1cba0ae53434939993b",
+      "bytes": 16380,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/wp02-recovered-source/server/prewarm_phrases.py",
+      "source": "Exact recovered fragment; incomplete, not installed at application root",
+      "sha256": "6708ddf8b07c0596d90d3c70ca812746e343044fe384f1d72fd5aafb8ef788c1",
+      "bytes": 2337,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/wp02-recovered-source/tests/test_closing_runtime.py",
+      "source": "Exact recovered fragment; incomplete, not installed at application root",
+      "sha256": "1b4a7450f289361d973adbba08193b46f570cc7a2a5fc9eb36fa675edb0c329c",
+      "bytes": 7423,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/wp02-recovered-source/tools/generate_turn_fixtures.py",
+      "source": "Exact recovered fragment; incomplete, not installed at application root",
+      "sha256": "4dfb45f4e0969d4a3cb4f4e1a52bb03e57406fc4c683875d4db2f36f1b2fd4c3",
+      "bytes": 3279,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/wp02-recovered-source/tools/offline_verify.py",
+      "source": "Exact recovered fragment; incomplete, not installed at application root",
+      "sha256": "896f006cbe78ffff9da090a22b40e71c91f89390cb50282d47fcac3b98b15c40",
+      "bytes": 3058,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/wp02-recovered-source/tools/verify_closing_runtime_mutations.py",
+      "source": "Exact recovered fragment; incomplete, not installed at application root",
+      "sha256": "8efc2b538155ebe573cb6e9d86b2695c16aa546e34b96b00f4b42c392b936322",
+      "bytes": 5119,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/evidence/recovered-source-ledger.json",
+      "source": "Recovery SHA-256 ledger",
+      "sha256": "d8fb4d679a9073d4bb6f4eea1d8cbfc7c3b64a76206c8be3d5ff9cdd2aa8c222",
+      "bytes": 1896,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/wp01-reviewed-source/server/live_pipeline.py",
+      "source": "WP1 f65fa8e source snapshot; not merged into WP2",
+      "sha256": "07fb3ff3cb8c8a701e928e0cae5e9fc4608534da6058676cc168c1aa0f877869",
+      "bytes": 86360,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/wp01-reviewed-source/server/turn_policy.py",
+      "source": "WP1 f65fa8e source snapshot; not merged into WP2",
+      "sha256": "985e9a9c06f465185a68fe156ef7e791bb140f65818f52761d4c4f2bd01bf8d6",
+      "bytes": 3598,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/wp01-reviewed-source/server/turn_start.py",
+      "source": "WP1 f65fa8e source snapshot; not merged into WP2",
+      "sha256": "eff8f715a481a8c719125e8ce475fcaf45037ff63f97fe3342e8a68b05b10e8b",
+      "bytes": 1037,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/evidence/wp01-CHECKPOINT.json",
+      "source": "WP1 delivered checkpoint receipt",
+      "sha256": "8de6e72d3bf3f26b03238b7a3cbb190e649d569eb889ef70d86343faed03efab",
+      "bytes": 4739,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/evidence/wp01-restore-check.json",
+      "source": "WP1 delivered checkpoint receipt",
+      "sha256": "67204f6bb7fb0da12026356b2644cb971a5241134d919d13559ae6296c3fbdb5",
+      "bytes": 494,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/checkpoint-tools/checkpoint_worktree.py",
+      "source": "Tested local checkpoint utility",
+      "sha256": "9f5b0e626a3ddf182f011dcb09f6e019c6aa5c0e6dc2c1878ef27e77b5f7a708",
+      "bytes": 7154,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/checkpoint-tools/test_checkpoint_worktree.py",
+      "source": "Tested local checkpoint utility",
+      "sha256": "d78bf967bc07277b7fd445de0a93c98617b6e12fc58dc5d8b81d824cf4084779",
+      "bytes": 4868,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/evidence/recovery/application-restored.json",
+      "source": "Recovery verification; applies to f112070 baseline",
+      "sha256": "ce9546211e25d9e3a5daf7b6f9c7d9206cd2e00f87debc6058ed6b87141d714f",
+      "bytes": 38515,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/evidence/recovery/reference-restored.json",
+      "source": "Recovery verification; applies to f112070 baseline",
+      "sha256": "53364e5f04b260da24f69ea6876099e6e5926cf1e4adc43171beab73e8410d43",
+      "bytes": 7957,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/evidence/recovery/reference-mutations-restored.json",
+      "source": "Recovery verification; applies to f112070 baseline",
+      "sha256": "67bbe8bf5c3395696b6dcc18f1cb946d9be7c7cfeebb36f3af092566f70a80bf",
+      "bytes": 455,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/evidence/recovery/checkpoint-tool-tests.log",
+      "source": "Recovery verification; applies to f112070 baseline",
+      "sha256": "697994e445440cda22a3bb84395b27701b864f37a5e1ad2f2f4e20dca27de4cf",
+      "bytes": 1199,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/evidence/recovery/recovery-receipt.json",
+      "source": "Recovery verification; applies to f112070 baseline",
+      "sha256": "b7d5ab71cfb4a5f2f383b67e45cad57c8c08fdec5edd6367adc2a1fcfd632bc9",
+      "bytes": 425,
+      "byte_identical_to_source": true
+    },
+    {
+      "path": "handoff/evidence/recovery/controller-mutations.json",
+      "source": "Recovery controller negative controls",
+      "sha256": "f7a833ba8a0109d57fed79969b49eb23f53f9d88441ca89d85d6cc8fe51c416d",
+      "bytes": 2053,
+      "byte_identical_to_source": true
+    }
+  ],
+  "note": "Original inputs and prior reports retain their original bytes. Their historical claims are bounded by START_HERE_NEW_CHAT.md."
+}

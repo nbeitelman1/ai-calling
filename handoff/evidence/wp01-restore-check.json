@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "head": "f65fa8e0bf2d7fcff3a38437006e4d86d2ebbd38",
+  "branch": "agile/wp-01-turn-stack",
+  "source_hashes_verified": 96,
+  "restored_policy_tests": 10,
+  "full_application_rerun_on_restore": false,
+  "bundle_verification": "/tmp/wp01-final-package/ai-calling.bundle is okay\nThe bundle contains this ref:\nf65fa8e0bf2d7fcff3a38437006e4d86d2ebbd38 refs/heads/agile/wp-01-turn-stack\nThe bundle records a complete history.\nThe bundle uses this hash algorithm: sha1\n"
+}

@@ -1,0 +1,58 @@
+{
+  "status": "PARTIAL_SOURCE_RECOVERED_NOT_RUNNABLE",
+  "files": [
+    {
+      "file": "server/closing_state.py",
+      "sha256": "4efc26923afbf87a917bf04af0753e3d12d904529045cebb5d446389a1c6994b",
+      "bytes": 7240,
+      "exact_prior_hash_match": true
+    },
+    {
+      "file": "server/prewarm_phrases.py",
+      "sha256": "6708ddf8b07c0596d90d3c70ca812746e343044fe384f1d72fd5aafb8ef788c1",
+      "bytes": 2337,
+      "exact_prior_hash_match": true
+    },
+    {
+      "file": "server/live_server.py",
+      "sha256": "f66124301edea9c5e3e6aae73c4f7bd17669b285f494a1cba0ae53434939993b",
+      "bytes": 16380,
+      "exact_prior_hash_match": true
+    },
+    {
+      "file": "server/live_pipeline.py",
+      "sha256": "c72f30377e0d16cc4dcd3bde2cf8762afe215869bd6170142861086dea8fd51d",
+      "bytes": 89908,
+      "exact_prior_hash_match": true
+    },
+    {
+      "file": "tools/offline_verify.py",
+      "sha256": "896f006cbe78ffff9da090a22b40e71c91f89390cb50282d47fcac3b98b15c40",
+      "bytes": 3058,
+      "exact_prior_hash_match": true
+    },
+    {
+      "file": "tools/generate_turn_fixtures.py",
+      "sha256": "4dfb45f4e0969d4a3cb4f4e1a52bb03e57406fc4c683875d4db2f36f1b2fd4c3",
+      "bytes": 3279,
+      "exact_prior_hash_match": true
+    },
+    {
+      "file": "tests/test_closing_runtime.py",
+      "sha256": "1b4a7450f289361d973adbba08193b46f570cc7a2a5fc9eb36fa675edb0c329c",
+      "bytes": 7423,
+      "exact_prior_hash_match": true
+    },
+    {
+      "file": "tools/verify_closing_runtime_mutations.py",
+      "sha256": "8efc2b538155ebe573cb6e9d86b2695c16aa546e34b96b00f4b42c392b936322",
+      "bytes": 5119,
+      "exact_prior_hash_match": true
+    }
+  ],
+  "missing_required_module": "server/closing_runtime.py",
+  "runtime_tests_revalidated": false,
+  "file_count": 8,
+  "application_baseline_files_verified_against_original_archive": 187,
+  "baseline_code_unchanged": true
+}

@@ -1,0 +1,24 @@
+{
+  "status": "PASS",
+  "scope": "BOUNDED_PATTERN_AND_FILE_INTEGRITY_AUDIT_NOT_EXHAUSTIVE_DLP",
+  "secret_pattern_findings": [],
+  "new_contact_identifiers_relative_to_public_work_order_base": {
+    "email": [
+      "fixture@example.invalid"
+    ],
+    "phone": []
+  },
+  "files_and_archive_members_scanned_as_text": 931,
+  "archive_expanded_bytes": 30586226,
+  "git_bundles_not_claimed_as_text_scanned": 3,
+  "original_markdown_documents_verified": 12,
+  "prior_artifacts_hash_verified": 42,
+  "application_and_reference_files_unchanged_from_f112070": 130,
+  "new_runtime_integration_claimed": false,
+  "notes": [
+    "Original Markdown bytes retained.",
+    "Raw chat transcripts and email exports excluded.",
+    "Authentication files are outside the repository and are not included.",
+    "Embedded Git bundles preserve prior local history; no exhaustive history-DLP claim is made."
+  ]
+}
